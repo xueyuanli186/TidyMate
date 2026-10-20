@@ -1,0 +1,54 @@
+# GitHub label definitions for TidyMate.
+#
+# Apply / update them with:
+#     python scripts/apply_labels.py --dry-run   # preview the commands
+#     python scripts/apply_labels.py             # requires `gh auth login`
+#
+# The script uses `gh label create --force`, so it is safe to re-run: labels are created
+# once and then kept in sync with this file.
+#
+# Colour convention:
+#   P0/P1/P2  severity ramp (red -> orange -> yellow)
+#   type      bug / enhancement / documentation
+#   intake    good first issue / help wanted
+#   area      windows / security
+
+- name: P0
+  color: b60205
+  description: 阻止发布。数据安全、误删/误覆盖、状态造假、黑名单失效。
+
+- name: P1
+  color: d93f0b
+  description: 必须在当前里程碑修复。核心功能不可用或有明确的次生风险。
+
+- name: P2
+  color: fbca04
+  description: 可以排期到后续里程碑。体验问题、非关键路径的缺陷。
+
+- name: bug
+  color: d73a4a
+  description: 可复现的缺陷（Bug）。请附带版本、batch_id 与 dry-run 结果。
+
+- name: enhancement
+  color: a2eeef
+  description: 功能改进或新需求（Enhancement）。
+
+- name: documentation
+  color: 0075ca
+  description: 文档：README、SECURITY、ROADMAP、注释与示例。
+
+- name: good first issue
+  color: 7057ff
+  description: 适合新贡献者。范围小、验收标准明确、不触碰写盘与撤销逻辑。
+
+- name: help wanted
+  color: 008672
+  description: 需要外部帮助：复现、平台验证、翻译或特定环境的测试。
+
+- name: security
+  color: 5319e7
+  description: 安全相关：删除路径、日志完整性、路径逃逸、隐私与网络边界。
+
+- name: windows
+  color: 0078d7
+  description: Windows 平台特定问题：NTFS、长路径、属性、回收站、OneDrive。

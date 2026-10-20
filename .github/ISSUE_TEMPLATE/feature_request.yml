@@ -1,0 +1,78 @@
+name: 功能请求
+description: 提出一个新功能或改进。涉及写盘/删除的请求会先过安全评审。
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提需求前请先看 `docs/ROADMAP.md`：如果已在路线图里，请在对应阶段下补充你的场景，而不是新开 issue。
+
+        本项目有一条硬约束：**功能不能以降低数据安全为代价**。任何"自动清理""静默覆盖""跳过确认"类需求都会先被拒绝，除非能证明它不违反铁律。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的问题
+      description: 描述场景，不要直接给实现方案。现在的工具为什么不够用？
+      placeholder: "我每周从手机导出 300 张照片，按日期分文件夹要在资源管理器里点 20 分钟……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的行为
+      description: 你希望 TidyMate 做什么？请描述可观察的结果，不要指定内部实现。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 你已经试过的替代方案（可选）
+      description: 现有规则、脚本、其他工具，以及为什么不够用。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: touches_writes
+    attributes:
+      label: 这个需求是否需要新的写盘 / 删除 / 撤销行为？
+      description: 选"是"的需求会走安全评审，并可能被要求先出验证报告。
+      options:
+        - 否，只是报告、预览或配置的改进
+        - 是，涉及移动 / 重命名 / 复制
+        - 是，涉及删除（只能进回收站）
+        - 是，涉及撤销 / 回滚
+        - 不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: touches_network
+    attributes:
+      label: 这个需求是否需要联网？
+      options:
+        - 不需要（默认应该不需要）
+        - 需要读取元数据的在线服务
+        - 需要上传文件内容
+        - 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 影响范围（可选）
+      description: 大约多少文件、什么类型、在什么目录（脱敏）。这决定我们要不要先做性能与安全评估。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: 确认
+      options:
+        - label: 我理解"默认 dry-run、删除只进回收站、系统目录拒绝操作"是不可协商的约束。
+          required: true

@@ -1,0 +1,70 @@
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Build / packaging output
+dist/
+build/lib/
+build/bdist/
+build/*.zip
+build/MSI/
+*.egg-info/
+.eggs/
+src/*.egg-info/
+wheels/
+
+# .NET leftovers kept on purpose: the repository must never gain bin/ obj/ output
+# even if a stray project file is dropped in by mistake.
+[Bb]in/
+[Oo]bj/
+
+# --- Test / coverage --------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+coverage.xml
+.coverage
+.coverage.*
+htmlcov/
+junit*.xml
+test-results/
+
+# --- TidyMate runtime data --------------------------------------------------
+# Journal databases must never be committed: they contain local absolute paths.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+journal.db*
+
+# Sandbox / drill directories: these are created by scripts/make-sandbox.ps1 and are
+# full of deliberately weird files. Never commit them.
+tidymate-sandbox*/
+sandbox/
+sandbox-*/
+.tidymate/
+*.msi
+*.wixpdb
+*.wixobj
+
+# --- OS / editor ------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

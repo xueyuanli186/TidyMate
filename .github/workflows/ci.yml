@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: CI only reads the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
+
+jobs:
+  lint:
+    name: lint + type check
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Restore (install project + dev dependencies)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: ruff check
+        run: python -m ruff check .
+
+      - name: ruff format check
+        run: python -m ruff format --check .
+
+      - name: mypy (strict mode)
+        run: python -m mypy
+
+  test:
+    name: test (python ${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Restore (install project + dev dependencies)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Test (pytest + coverage, warnings are errors)
+        run: python -m pytest
+
+      - name: Upload coverage report
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python }}
+          path: coverage.xml
+          retention-days: 14
+          if-no-files-found: error
+
+  safety:
+    name: safety guard (no permanent delete)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Forbidden delete API scan
+        run: python scripts/check_forbidden_apis.py
+
+      - name: Sandbox script smoke test
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/make-sandbox.ps1 -Root "$env:RUNNER_TEMP\tidymate-sandbox"
+          if (-not (Test-Path "$env:RUNNER_TEMP\tidymate-sandbox\sandbox-manifest.txt")) {
+            throw "sandbox manifest missing"
+          }
+          Get-Content "$env:RUNNER_TEMP\tidymate-sandbox\sandbox-manifest.txt" | Select-Object -First 6
+
+  package:
+    name: package
+    needs: [lint, test, safety]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Restore (install build dependencies)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install --upgrade build
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: python scripts/version.py --github-output | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Build wheel
+        run: python -m build --wheel --outdir dist
+
+      - name: Build placeholder bundle (zip)
+        run: python scripts/make_dist.py
+
+      - name: Verify artifact contents
+        shell: pwsh
+        run: |
+          $zip = "dist/TidyMate-${{ steps.version.outputs.version }}-windows.zip"
+          if (-not (Test-Path $zip)) { throw "missing $zip" }
+          if (-not (Test-Path "$zip.sha256")) { throw "missing checksum for $zip" }
+          $hashOk = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
+          $hashFile = (Get-Content "$zip.sha256").Split(' ')[0]
+          if ($hashOk -ne $hashFile) { throw "sha256 mismatch: $hashOk vs $hashFile" }
+          Write-Host "artifact name: TidyMate-${{ steps.version.outputs.version }}-windows"
+          Write-Host "sha256: $hashOk"
+
+      - name: Upload windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TidyMate-${{ steps.version.outputs.version }}-windows
+          path: |
+            dist/TidyMate-*-windows.zip
+            dist/TidyMate-*-windows.zip.sha256
+            dist/*.whl
+          retention-days: 14
+          if-no-files-found: error

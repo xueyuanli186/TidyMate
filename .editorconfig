@@ -1,0 +1,36 @@
+# TidyMate editor baseline.
+#
+# Mapping note (stage 0): the .NET-era requirements were <Nullable>enable</Nullable> and
+# <TreatWarningsAsErrors>true</TreatWarningsAsErrors>. In this Python repository they are
+# implemented by [tool.mypy] strict = true and [tool.pytest.ini_options] filterwarnings =
+# ["error"] plus ruff in CI, all declared in pyproject.toml.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+indent_size = 2
+
+[*.ps1]
+# PowerShell files are kept CRLF so they run unmodified from a Windows checkout.
+end_of_line = crlf
+indent_size = 4
+
+[*.cmd]
+end_of_line = crlf
+
+[*.{bat,cmd,ps1}]
+charset = utf-8
+
+[{*.github/**/*.yml,*.github/**/*.yaml}]
+indent_size = 2

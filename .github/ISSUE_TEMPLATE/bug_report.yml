@@ -1,0 +1,108 @@
+name: Bug 报告
+description: 报告一个可复现的缺陷。请先在 dry-run 模式下复现，并确认不是配置问题。
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **先读这段，能省一轮来回：**
+
+        1. 请**先在 `--dry-run` 下复现**。`--apply` 之后才出现的问题同样要报，但请注明。
+        2. 涉及真实数据的问题，请先确认你有备份；本工具默认不写盘，但缺陷恰恰意味着"默认"失效了。
+        3. **不要粘贴真实的用户名、公司名、绝对路径**。用 `C:\Users\<user>\...` 这类占位符替换。
+        4. 安全漏洞（路径逃逸、误删、日志可伪造、联网）**不要开公开 issue**，走 SECURITY.md 的私下渠道。
+
+  - type: input
+    id: tidymate_version
+    attributes:
+      label: TidyMate 版本
+      description: 填 `tidymate --version` 的输出，或 MSI/zip 的文件名。
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows 版本
+      description: 版本号 + 内部版本号（`winver` 或 `[System.Environment]::OSVersion.Version`）。
+      placeholder: "Windows 11 23H2 (22631.4317) / Windows 10 22H2 (19045.5011)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dry_run
+    attributes:
+      label: 是否已在 dry-run 模式下复现？
+      description: 没跑过 dry-run 的问题，我们无法判断是规划缺陷还是执行缺陷。
+      options:
+        - 是，只跑过 dry-run（--apply 未执行）
+        - 否，问题只在 --apply 之后出现
+        - 两者都有问题
+        - 不确定 / 没试过
+    validations:
+      required: true
+
+  - type: input
+    id: batch_id
+    attributes:
+      label: batch_id
+      description: |
+        `--apply` 或 `undo` 相关问题必填：从 `tidymate status` 或撤销日志里取。
+        纯 dry-run / 扫描问题请填 `N/A`。
+      placeholder: "20261020-112233-a1b2c3 或 N/A"
+    validations:
+      required: true
+
+  - type: textarea
+    id: rules_file
+    attributes:
+      label: 规则文件（相关片段）
+      description: 粘贴触发问题的那条规则。路径请脱敏；不要贴整个含私人信息的配置文件。
+      render: yaml
+      placeholder: |
+        rules:
+          - name: screenshots
+            match: { ext: [".png", ".jpg"] }
+            target: "Pictures/Screenshots/{yyyy}-{MM}"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你认为应该发生什么？如果与"安全优先"冲突，请说明理由。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？请附报告片段（脱敏后）或状态统计。
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: report_excerpt
+    attributes:
+      label: 报告 / 日志片段（可选）
+      description: dry-run 报告的统计行、失败条目、或 SQLite 中相关记录。脱敏后再贴。
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety_ack
+    attributes:
+      label: 安全确认
+      options:
+        - label: 我已用 `C:\Users\<user>\...` 之类的占位符替换了所有真实路径与用户名。
+          required: true
+        - label: 我确认这次操作不在他人的真实数据上，或者我已经有可用备份。
+          required: true
+        - label: 这不是安全漏洞（若是，我会按 SECURITY.md 走私下渠道，而不是公开 issue）。
+          required: true

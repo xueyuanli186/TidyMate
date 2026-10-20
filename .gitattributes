@@ -1,0 +1,28 @@
+# Normalise text files on commit, keep Windows scripts runnable after checkout.
+* text=auto eol=lf
+
+*.py     text eol=lf
+*.toml   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.md     text eol=lf
+*.json   text eol=lf
+*.ps1    text eol=crlf
+*.psm1   text eol=crlf
+*.cmd    text eol=crlf
+*.bat    text eol=crlf
+
+# Binaries: never diff, never convert.
+*.zip    binary
+*.msi    binary
+*.exe    binary
+*.dll    binary
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.db     binary
+*.sqlite binary
+
+# Generated / vendored: exclude from GitHub language stats and diffs.
+dist/**      linguist-generated=true
+coverage.xml linguist-generated=true
