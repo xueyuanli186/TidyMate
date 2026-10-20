@@ -14,7 +14,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `master` @ `c9b00c4`（阶段 3-4 返工：ADS/OneDrive + rename 退化） |
+| 分支 / 提交 | `main` @ `3246284`（阶段 3-4 返工：ADS/OneDrive + rename 退化） |
 | 测试 | `493 passed`（3.3s），覆盖率 `93.01%`（门槛 90%） |
 | 静态检查 | `ruff check` / `ruff format --check`（96 文件）/ `mypy`（81 文件）全过 |
 | 安全闸门 | `check_forbidden_apis.py`：`OK ... 52 scanned files`；`check_readonly.py`：`OK ... 35 product files` |
