@@ -14,10 +14,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `master` @ `f8201c6`，工作区干净 |
-| 测试 | `486 passed`（3.7s），覆盖率 `92.70%`（门槛 90%） |
-| 静态检查 | `ruff check` / `ruff format --check`（90 文件）/ `mypy`（79 文件）全过 |
-| 安全闸门 | `check_forbidden_apis.py`：`OK ... 51 scanned files`；`check_readonly.py`：`OK ... 34 product files` |
+| 分支 / 提交 | `master` @ `c9b00c4`（阶段 3-4 返工：ADS/OneDrive + rename 退化） |
+| 测试 | `492 passed`（3.3s），覆盖率 `93.01%`（门槛 90%） |
+| 静态检查 | `ruff check` / `ruff format --check`（94 文件）/ `mypy`（81 文件）全过 |
+| 安全闸门 | `check_forbidden_apis.py`：`OK ... 52 scanned files`；`check_readonly.py`：`OK ... 35 product files` |
 | 版本 | `0.1.0`，唯一来源 `src/tidymate_core/_version.py` |
 
 复现命令（在仓库根目录）：
@@ -43,6 +43,9 @@ python scripts/check_readonly.py
    由 `test_leading_dot_is_preserved` 锁定。
 6. **模板字面量里的非法字符 = 规则文件错误**；只有渲染出来的值才净化。
 7. 版本号只改 `_version.py`，其余（CLI、dist 名、未来的 MSI、git tag）都从它派生。
+8. **ADS / OneDrive 占位是 `skip`，不是 `reject`**：`error_kind` 为 `ads` /
+   `onedrive_placeholder`。阶段 5 的执行器必须按 `error_kind` 拒绝执行这两类条目，
+   且要在移动前复查（见第 5 节第一条）。
 
 ## 4. 下一步：阶段 5，按这个顺序做（一次只推一个 M）
 
@@ -66,6 +69,13 @@ python scripts/check_forbidden_apis.py   # 期望 OK，且扫描文件数比 51 
 
 ## 5. 已知欠缺与坑（别重复踩）
 
+- **ADS 检测的失败路径**：`list_alternate_streams()` 在句柄打不开时返回 `None`，扫描
+  阶段按"无流"处理。阶段 5 的执行器必须在移动前复查，`None` 时该条目按失败处理，
+  不能当作干净文件放行。
+- **真实 OneDrive 环境未验证**：占位属性是注入的（Windows 不允许手工设置
+  `RECALL_ON_DATA_ACCESS`），见 `docs/validation/STAGE-3-4-P0.md` 第 2.2 节。
+- **`allow_long_path` 尚不存在**：README FAQ 已写明"计划中、未实现"，别在别处
+  宣称它可用。
 - CI 已跑通（run #39375183042，五 job 全绿）；`release.yml` 仍未验证（需要 `v*` tag）。
 - MSI 只有工作流占位，没有 `.wxs`。
 - GUI 只验证了 offscreen 渲染与真实截图（`docs/images/gui-dry-run.png`），
