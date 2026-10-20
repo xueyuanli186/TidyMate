@@ -68,3 +68,6 @@ $RECYCLE.BIN/
 .vscode/
 *.swp
 *~
+
+# DSH ops editor lock files (transient)
+.dsh-ops-*.lock

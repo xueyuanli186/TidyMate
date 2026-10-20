@@ -1,7 +1,7 @@
 # Issue 草稿：rename fallback 增加时间戳阶段
 
-> 状态：**待创建**（本机无 GitHub 凭据）。创建后请把编号回填到
-> `docs/validation/STAGE-3-4-P0.md` 第 6 节，并关闭本 Issue（修复已在 `c9b00c4`）。
+> 状态：**已创建** —— [#2](https://github.com/xueyuanli186/TidyMate/issues/2)
+> （2026-10-20）；修复提交 `c9b00c4` 已关联。本文档保留为正文存档。
 
 **标题**
 

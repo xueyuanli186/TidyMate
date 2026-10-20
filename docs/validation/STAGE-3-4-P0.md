@@ -159,14 +159,12 @@ tests/tidymate_core_tests/test_special_files.py::test_timestamp_fallback_keeps_t
 
 ## 6. P1 的 GitHub Issue
 
-当前环境没有 `gh` CLI，也没有可用的 GitHub token（`git credential fill` 提示无凭据），
-因此**无法**直接创建 Issue。已按产品负责人的选择改为"网页手工创建"：
+- 编号：**[#2](https://github.com/xueyuanli186/TidyMate/issues/2)**（产品负责人创建，2026-10-20）
+- 标题：`rename fallback: add a timestamp stage after name (2..999)`
+- 修复提交：`c9b00c4`（已关联）
+- 正文存档：[`docs/issues/rename-fallback.md`](../issues/rename-fallback.md)
 
-- 标题与正文：`docs/issues/rename-fallback.md`（可直接整段粘贴）；
-- 修复提交：`c9b00c4`；
-- **编号：待回填**。创建后把编号写回本节，并把该文档的"状态"改为已创建。
-
-在此之前，这一条不能声称"已登记"。
+Issue 里的验收三条均有测试覆盖（见第 3 节最后一行与第 4 节）。
 
 ## 7. 回归（真实输出）
 
