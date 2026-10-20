@@ -133,7 +133,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install --upgrade build
+          python -m pip install --upgrade build pyinstaller
 
       - name: Resolve version
         id: version
@@ -143,20 +143,40 @@ jobs:
       - name: Build wheel
         run: python -m build --wheel --outdir dist
 
-      - name: Build placeholder bundle (zip)
+      - name: Build bundle (PyInstaller onedir + zip)
         run: python scripts/make_dist.py
+
+      - name: Install WiX v4
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Build MSI (WiX v4)
+        run: >
+          python build/build_msi.py
+          --version ${{ steps.version.outputs.version }}
+          --source dist/TidyMate-${{ steps.version.outputs.version }}-windows
+          --output dist/TidyMate-${{ steps.version.outputs.version }}-windows.msi
 
       - name: Verify artifact contents
         shell: pwsh
         run: |
           $zip = "dist/TidyMate-${{ steps.version.outputs.version }}-windows.zip"
+          $msi = "dist/TidyMate-${{ steps.version.outputs.version }}-windows.msi"
           if (-not (Test-Path $zip)) { throw "missing $zip" }
           if (-not (Test-Path "$zip.sha256")) { throw "missing checksum for $zip" }
+          if (-not (Test-Path $msi)) { throw "missing $msi" }
           $hashOk = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
           $hashFile = (Get-Content "$zip.sha256").Split(' ')[0]
           if ($hashOk -ne $hashFile) { throw "sha256 mismatch: $hashOk vs $hashFile" }
+          $exe = "dist/TidyMate-${{ steps.version.outputs.version }}-windows/cli/tidymate.exe"
+          $gui = "dist/TidyMate-${{ steps.version.outputs.version }}-windows/TidyMate.exe"
+          if (-not (Test-Path $exe)) { throw "missing $exe" }
+          if (-not (Test-Path $gui)) { throw "missing $gui" }
           Write-Host "artifact name: TidyMate-${{ steps.version.outputs.version }}-windows"
           Write-Host "sha256: $hashOk"
+          Write-Host "msi bytes: $((Get-Item $msi).Length)"
 
       - name: Upload windows artifact
         uses: actions/upload-artifact@v4
@@ -165,6 +185,7 @@ jobs:
           path: |
             dist/TidyMate-*-windows.zip
             dist/TidyMate-*-windows.zip.sha256
+            dist/TidyMate-*-windows.msi
             dist/*.whl
           retention-days: 14
           if-no-files-found: error

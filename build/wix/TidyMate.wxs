@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TidyMate MSI (WiX v4).
+
+  Design decisions, each deliberate:
+
+  * per-machine install into Program Files: the app writes only to %LOCALAPPDATA%
+    (journal, reports) and never needs admin at runtime;
+  * <Files Include="...\**"> harvests the PyInstaller onedir tree, so the file list
+    follows the build instead of drifting from a hand-maintained list;
+  * uninstall removes the program files and the start-menu shortcuts only. The journal
+    database and reports under %LOCALAPPDATA%\TidyMate are user data and are never
+    touched by the installer (no RemoveFolderEx, no registry cleanup of user data);
+  * ProductVersion comes from src/tidymate_core/_version.py via build/build_msi.py.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="TidyMate"
+      Manufacturer="TidyMate Project"
+      Version="$(var.Version)"
+      UpgradeCode="6f2a9c1e-4b7d-4e83-9c0a-2f5b8d7e1a34"
+      Scope="perMachine">
+
+    <SummaryInformation Description="TidyMate - local Windows file organiser (preview, undo, recycle bin only)" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of TidyMate is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="TidyMate">
+        <Files Include="$(var.SourceDir)\**" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="TidyMate">
+        <Component Id="StartMenuShortcuts" Guid="*">
+          <Shortcut
+              Id="GuiShortcut"
+              Name="TidyMate"
+              Description="Preview, execute and undo file organisation"
+              Target="[INSTALLFOLDER]TidyMate.exe"
+              WorkingDirectory="INSTALLFOLDER" />
+          <Shortcut
+              Id="CliShortcut"
+              Name="TidyMate CLI"
+              Description="Command line: plan / apply / undo / verify"
+              Target="[INSTALLFOLDER]cli	idymate.exe"
+              WorkingDirectory="INSTALLFOLDER" />
+          <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
+          <RegistryValue
+              Root="HKCU"
+              Key="Software\TidyMate"
+              Name="installed"
+              Type="integer"
+              Value="1"
+              KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+  </Package>
+</Wix>

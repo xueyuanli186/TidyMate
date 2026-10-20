@@ -14,10 +14,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `main` @ 阶段 8 提交（GUI 执行与撤销） |
-| 测试 | `572 passed`（57s），覆盖率 `90.12%`（门槛 90%） |
-| 静态检查 | `ruff check` / `ruff format --check`（116 文件）/ `mypy`（97 文件）全过 |
-| 安全闸门 | `check_forbidden_apis.py`：`OK ... 60 scanned files`；`check_readonly.py`：`OK ... 43 product files` |
+| 分支 / 提交 | `main` @ 阶段 9 提交（便携版 + MSI 打包） |
+| 测试 | `572 passed`（57s），覆盖率 `90.30%`（门槛 90%） |
+| 静态检查 | `ruff check` / `ruff format --check`（119 文件）/ `mypy`（99 文件）全过 |
+| 安全闸门 | `check_forbidden_apis.py`：`OK ... 61+ scanned files`；`check_readonly.py`：`OK ... 43 product files` |
 | 版本 | `0.1.0`，唯一来源 `src/tidymate_core/_version.py` |
 
 复现命令（在仓库根目录）：
@@ -47,13 +47,12 @@ python scripts/check_readonly.py
    `onedrive_placeholder`。阶段 5 的执行器必须按 `error_kind` 拒绝执行这两类条目，
    且要在移动前复查（见第 5 节第一条）。
 
-## 4. 下一步：阶段 9（打包与发布）
+## 4. 下一步：发布前验证
 
-1. PyInstaller onedir 打包，`scripts/make_dist.py` 已有占位；
-2. WiX v4 MSI（`build/` 目前只有工作流占位，没有 `.wxs`）；
-3. 便携 zip、签名（待定）、`release.yml` 验证（需要打 `v*` tag）。
-
-GUI 侧遗留：执行是同步的（大批次会短暂冻结），历史批次选择器未做。
+1. 在干净 Windows 11 VM 上安装 MSI、启动 GUI、卸载，确认用户数据不被删除；
+2. 打 `v0.1.0` tag 验证 `release.yml`（仍未实测）；
+3. 决定是否购买代码签名证书（未签名 MSI 会触发 SmartScreen）；
+4. GUI 的 P1 遗留：同步执行冻结界面、缺少历史批次选择器（v0.2.0）。
 
 ## 5. 已知欠缺与坑（别重复踩）
 

@@ -61,11 +61,18 @@ jobs:
       # with:  python build/build_msi.py --version ${{ steps.version.outputs.version }}
       # and add dist/*.msi to the release files list below.
       # ---------------------------------------------------------------------
-      - name: Build MSI (WiX v4) - not implemented yet
+      - name: Install WiX v4
         shell: pwsh
         run: |
-          Write-Warning "MSI build is not implemented yet (stage 0). The release will not contain an installer."
-          Write-Host "::notice title=MSI pending::WiX v4 packaging lands in a later stage."
+          dotnet tool install --global wix
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Build MSI (WiX v4)
+        run: >
+          python build/build_msi.py
+          --version ${{ steps.version.outputs.version }}
+          --source dist/TidyMate-${{ steps.version.outputs.version }}-windows
+          --output dist/TidyMate-${{ steps.version.outputs.version }}-windows.msi
 
       - name: List release assets
         shell: pwsh

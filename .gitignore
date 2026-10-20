@@ -71,3 +71,7 @@ $RECYCLE.BIN/
 
 # DSH ops editor lock files (transient)
 .dsh-ops-*.lock
+
+# PyInstaller working directories
+build/pyinstaller/
+build/specs/
