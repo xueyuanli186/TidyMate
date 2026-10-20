@@ -2,11 +2,11 @@
 
 Windows 本地文件整理器。按规则把散乱文件归入模板目录，**全程可预览、可撤销、默认不联网**。
 
-> **当前状态：阶段 7-9（批次日志 + 一键撤销 + 错误报告）。可以整理，也可以撤回。**
-> `plan` 预览、`apply` 执行、`undo` 撤销、`verify` 核对；每一步都写 SQLite 日志，
-> 删除只进回收站，撤销默认先 dry-run。200 条混合变更的 apply→undo 往返已验证与
-> apply 前逐字节一致（见 [`docs/validation/STAGE-7-9.md`](docs/validation/STAGE-7-9.md)）。
-> GUI（阶段 8）与打包（阶段 9）尚未完成，GUI 的执行按钮仍是禁用的。
+> **当前状态：阶段 8（GUI 执行与撤销）。预览、执行、撤销、核对都可用。**
+> 界面复用与 CLI 相同的门禁、执行器与撤销引擎；执行和撤销都有二次确认，删除只进回收站。
+> 200 条变更的 apply→undo 往返已验证与初始状态一致（见
+> [`docs/validation/STAGE-7-9.md`](docs/validation/STAGE-7-9.md)、
+> [`docs/validation/STAGE-8.md`](docs/validation/STAGE-8.md)）。打包（阶段 9）尚未完成。
 >
 > **换会话 / 上下文用尽时**：从 [`docs/HANDOFF.md`](docs/HANDOFF.md) 继续，那里有当前基线、
 > 已定决策和下一步。

@@ -14,9 +14,9 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `main` @ 阶段 7-9 提交（批次日志 + 撤销 + 错误报告） |
-| 测试 | `569 passed`（55s），覆盖率 `90.12%`（门槛 90%） |
-| 静态检查 | `ruff check` / `ruff format --check`（113 文件）/ `mypy`（96 文件）全过 |
+| 分支 / 提交 | `main` @ 阶段 8 提交（GUI 执行与撤销） |
+| 测试 | `572 passed`（57s），覆盖率 `90.12%`（门槛 90%） |
+| 静态检查 | `ruff check` / `ruff format --check`（116 文件）/ `mypy`（97 文件）全过 |
 | 安全闸门 | `check_forbidden_apis.py`：`OK ... 60 scanned files`；`check_readonly.py`：`OK ... 43 product files` |
 | 版本 | `0.1.0`，唯一来源 `src/tidymate_core/_version.py` |
 
@@ -47,14 +47,13 @@ python scripts/check_readonly.py
    `onedrive_placeholder`。阶段 5 的执行器必须按 `error_kind` 拒绝执行这两类条目，
    且要在移动前复查（见第 5 节第一条）。
 
-## 4. 下一步：阶段 8（GUI）与阶段 9（打包）
+## 4. 下一步：阶段 9（打包与发布）
 
-撤销引擎已完成，200 条往返验证通过。剩余：
+1. PyInstaller onedir 打包，`scripts/make_dist.py` 已有占位；
+2. WiX v4 MSI（`build/` 目前只有工作流占位，没有 `.wxs`）；
+3. 便携 zip、签名（待定）、`release.yml` 验证（需要打 `v*` tag）。
 
-1. 阶段 8：PySide6 界面接上 `apply` / `undo` / `verify`，执行与撤销都要二次确认弹窗；
-   现有 GUI 仍禁用执行按钮。
-2. 阶段 9：PyInstaller onedir、WiX MSI、发布流程（`release.yml` 仍未验证）。
-3. 阶段 7 还差 `scan` 子命令（CLI 完整化表里已标注部分完成）。
+GUI 侧遗留：执行是同步的（大批次会短暂冻结），历史批次选择器未做。
 
 ## 5. 已知欠缺与坑（别重复踩）
 
