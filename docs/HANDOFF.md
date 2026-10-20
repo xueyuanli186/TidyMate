@@ -14,7 +14,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `main` @ 阶段 9 提交（便携版 + MSI 打包） |
+| 分支 / 提交 | `main` @ 阶段 9（便携版 + MSI 已本机构建） |
 | 测试 | `572 passed`（57s），覆盖率 `90.30%`（门槛 90%） |
 | 静态检查 | `ruff check` / `ruff format --check`（119 文件）/ `mypy`（99 文件）全过 |
 | 安全闸门 | `check_forbidden_apis.py`：`OK ... 61+ scanned files`；`check_readonly.py`：`OK ... 43 product files` |

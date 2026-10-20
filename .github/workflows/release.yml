@@ -61,10 +61,11 @@ jobs:
       # with:  python build/build_msi.py --version ${{ steps.version.outputs.version }}
       # and add dist/*.msi to the release files list below.
       # ---------------------------------------------------------------------
-      - name: Install WiX v4
+      - name: Install WiX v7
         shell: pwsh
         run: |
           dotnet tool install --global wix
+          & "$env:USERPROFILE\.dotnet\tools\wix.exe" eula accept wix7
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Build MSI (WiX v4)

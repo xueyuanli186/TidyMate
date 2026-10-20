@@ -146,10 +146,11 @@ jobs:
       - name: Build bundle (PyInstaller onedir + zip)
         run: python scripts/make_dist.py
 
-      - name: Install WiX v4
+      - name: Install WiX v7
         shell: pwsh
         run: |
           dotnet tool install --global wix
+          & "$env:USERPROFILE\.dotnet\tools\wix.exe" eula accept wix7
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Build MSI (WiX v4)

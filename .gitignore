@@ -75,3 +75,7 @@ $RECYCLE.BIN/
 # PyInstaller working directories
 build/pyinstaller/
 build/specs/
+
+# MSI verification artifacts
+build/msi-extract/
+build/msi-install.log

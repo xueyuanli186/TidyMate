@@ -57,8 +57,44 @@ tidymate 0.1.0
 - CI：`package` job 安装 `wix`（dotnet tool）后构建 MSI，并校验 zip、sha256、两个 exe、
   MSI 都存在；artifact 上传包含 `.msi`。
 
-本机未安装 WiX v4，因此 MSI 的"安装 → 运行 → 卸载"未在本机验证；CI 只验证"能构建"。
-**未验证项**：干净 VM 上安装/卸载、快捷方式、SmartScreen/签名、升级路径。
+### 3.1 本机构建与验证（2026-10-20，WiX **v7**）
+
+```text
+$ wix --version
+7.0.0+b8977d6
+
+$ wix eula accept wix7          # v7 要求一次性接受 OSMF EULA
+$ python build/build_msi.py --version 0.1.0       --source dist/TidyMate-0.1.0-windows       --output dist/TidyMate-0.1.0-windows.msi
+msi    : ...\TidyMate-0.1.0-windows.msi (40890368 bytes)
+version: 0.1.0
+```
+
+MSI 属性（用 WindowsInstaller COM 读取 Property 表）：
+
+```text
+ProductName=TidyMate
+ProductVersion=0.1.0
+Manufacturer=TidyMate Project
+UpgradeCode={6F2A9C1E-4B7D-4E83-9C0A-2F5B8D7E1A34}
+ALLUSERS=1
+```
+
+管理安装提取（`msiexec /a`，不修改系统）验证载荷：
+
+```text
+PFiles64\TidyMate\TidyMate.exe        2,205,606 bytes
+PFiles64\TidyMate\cli	idymate.exe   6,103,117 bytes
+PFiles64\TidyMate\VERSION.txt         TidyMate 0.1.0
+
+$ ...\PFiles64\TidyMate\cli	idymate.exe --version
+tidymate 0.1.0
+```
+
+**真实安装未完成**：当前会话不是管理员，`msiexec /i ... /qn` 返回 **1603**（per-machine
+安装需要提权）。因此"安装 → 快捷方式 → 卸载"仍属未验证项。
+
+CI 侧：`dotnet tool install --global wix` 会装 v7，工作流已加入
+`wix eula accept wix7`，否则 CI 也会被 WIX7015 拦住。
 
 ## 4. CI 变更
 
@@ -92,7 +128,8 @@ $ python -m pytest -q
 
 ## 6. 未验证项
 
-1. **MSI 的安装/卸载**：本机无 WiX，只有 CI 构建证据。
+1. **MSI 的安装/卸载**：本机已构建并提取验证，但非管理员无法 per-machine 安装（1603）；
+   需要在管理员会话或干净 VM 上完成安装/卸载验证。
 2. **干净 Windows 11 VM**：便携版与 MSI 都未在无 Python 环境的机器上启动过。
 3. **GUI 版首次启动**：windowed exe 无法在当前无显示环境冒烟。
 4. **签名**：未签名，SmartScreen 会告警（是否购买证书仍未决定）。
