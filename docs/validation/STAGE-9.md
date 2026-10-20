@@ -90,6 +90,33 @@ $ ...\PFiles64\TidyMate\cli	idymate.exe --version
 tidymate 0.1.0
 ```
 
+### 3.2 安装与卸载验证（管理员，2026-10-20）
+
+```text
+uninstall {98AABDBC-...} exit=0
+uninstall {6D99EDCD-...} exit=0
+after uninstall: {"program": false, "menu": false, "arp": 0, "userdb": true}
+install exit=0
+
+ARP: TidyMate 0.1.0 {6D99EDCD-4348-4297-9337-16DC6F31254D}
+TidyMate CLI.lnk -> C:\Program Files\TidyMate\cli\tidymate.exe
+TidyMate.lnk     -> C:\Program Files\TidyMate\TidyMate.exe
+$ tidymate --version
+tidymate 0.1.0
+user data: C:\Users\ASUS\AppData\Local\TidyMate\tidymate.db (28,672 bytes, 卸载后仍在)
+```
+
+验证到的三件事：程序文件与快捷方式随卸载消失；ARP 条目清零；**用户日志/数据库保留**。
+
+### 3.3 本阶段抓到并修复的两个 bug
+
+1. **`\t` 被当成制表符**：`Target="[INSTALLFOLDER]cli\tidymate.exe"` 编译后变成
+   `cli<TAB>idymate.exe`，快捷方式失效。改用 XML 实体 `&#92;` 表示反斜杠。
+   修复前用 WindowsInstaller COM 读 Shortcut 表确认，修复后同法确认。
+2. **ProductCode 每次构建随机**：同版本重建后 `msiexec /x <msi>` 报 **1605**，ARP 里
+   出现两条同版本记录。改为按版本派生稳定 UUID（uuid5），同一版本 ProductCode 固定、
+   下一版本自动变化；测试 `test_product_code_is_stable_per_version` 锁住。
+
 **真实安装未完成**：当前会话不是管理员，`msiexec /i ... /qn` 返回 **1603**（per-machine
 安装需要提权）。因此"安装 → 快捷方式 → 卸载"仍属未验证项。
 
@@ -128,8 +155,8 @@ $ python -m pytest -q
 
 ## 6. 未验证项
 
-1. **MSI 的安装/卸载**：本机已构建并提取验证，但非管理员无法 per-machine 安装（1603）；
-   需要在管理员会话或干净 VM 上完成安装/卸载验证。
+1. **干净 VM 验证**：本机（已有 Python/Qt 环境）的安装/卸载已通过；仍未在全新 Windows 11 VM 上
+   验证“无运行时也能启动”。
 2. **干净 Windows 11 VM**：便携版与 MSI 都未在无 Python 环境的机器上启动过。
 3. **GUI 版首次启动**：windowed exe 无法在当前无显示环境冒烟。
 4. **签名**：未签名，SmartScreen 会告警（是否购买证书仍未决定）。
