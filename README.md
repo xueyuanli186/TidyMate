@@ -2,10 +2,12 @@
 
 Windows 本地文件整理器。按规则把散乱文件归入模板目录，**全程可预览、可撤销、默认不联网**。
 
-> **当前状态：阶段 4（扫描 + 规则 + Dry-run 预览，只读）。还不能整理任何文件。**
-> 现在可以扫描目录、按 YAML 规则匹配、渲染目标路径、检测冲突，并导出
-> `plan.json` / `report.md`。**没有任何移动/复制/删除代码**——`python scripts/check_readonly.py`
-> 在 CI 里强制这一点（唯一例外是报告导出模块）。执行按钮在 GUI 里是禁用的。
+> **当前状态：阶段 5-6（冲突处理 + 执行器）。可以真实整理文件了，但默认仍是 dry-run。**
+> `tidymate plan` 只预览；`tidymate apply <batch_id>` 才会移动，且必须通过五道门禁
+> （同 plan_hash 的预览、显式确认、黑名单零命中、祖先零命中、日志可写与空间足够）。
+> 删除只进回收站；每条操作先写 SQLite intent 再动文件。撤销（阶段 6）与 GUI 二次确认
+> （阶段 8）尚未实现，执行按钮在 GUI 里仍是禁用的。
+> 细节见 [`docs/validation/STAGE-5-6.md`](docs/validation/STAGE-5-6.md)。
 >
 > **换会话 / 上下文用尽时**：从 [`docs/HANDOFF.md`](docs/HANDOFF.md) 继续，那里有当前基线、
 > 已定决策和下一步。

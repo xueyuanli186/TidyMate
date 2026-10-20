@@ -33,9 +33,23 @@ _OPEN_EXISTING = 3
 _FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 #: ``FILE_INFO_BY_HANDLE_CLASS.FileStreamInfo`` (the enum value is 7, not 22).
 _FILE_STREAM_INFO_CLASS = 7
+#: ``FILE_INFO_BY_HANDLE_CLASS.FileStandardInfo``.
+_FILE_STANDARD_INFO_CLASS = 1
 _ERROR_MORE_DATA = 234
 _MAX_BUFFER = 1 << 20
 _INVALID_HANDLE = ctypes.c_void_p(-1).value
+
+
+class _StandardInfo(ctypes.Structure):
+    """Subset of ``FILE_STANDARD_INFO``; only the link count is used here."""
+
+    _fields_ = (
+        ("allocation_size", ctypes.c_longlong),
+        ("end_of_file", ctypes.c_longlong),
+        ("number_of_links", wintypes.DWORD),
+        ("delete_pending", wintypes.BOOLEAN),
+        ("directory", wintypes.BOOLEAN),
+    )
 
 
 class _StreamInfoHeader(ctypes.Structure):
@@ -106,17 +120,10 @@ def _parse_streams(buffer: bytes) -> tuple[str, ...]:
     return tuple(names)
 
 
-def list_alternate_streams(path: str) -> tuple[str, ...] | None:
-    """Return the alternate stream names of *path*, or ``None`` when unknown.
-
-    ``None`` means "could not decide" (non-Windows host, unreadable handle). Callers
-    must treat it as *unknown*, not as "clean": iron rule 10 forbids pretending a
-    check succeeded when it did not. The scanner records that as a warning-free
-    unknown today; the limitation is listed in ``docs/HANDOFF.md``.
-    """
+def _open_attributes_handle(path: str) -> tuple[ctypes.WinDLL | None, int | None]:
+    """Open *path* with ``FILE_READ_ATTRIBUTES`` only, never hydrating a placeholder."""
     if sys.platform != "win32" or os.name != "nt":
-        return None
-
+        return None, None
     kernel32 = _kernel32()
     handle = kernel32.CreateFileW(
         paths.to_extended(path),
@@ -128,21 +135,60 @@ def list_alternate_streams(path: str) -> tuple[str, ...] | None:
         None,
     )
     if handle is None or handle == _INVALID_HANDLE:
+        return None, None
+    return kernel32, handle
+
+
+def _read_streams(kernel32: ctypes.WinDLL, handle: int) -> tuple[str, ...] | None:
+    size = 4096
+    while size <= _MAX_BUFFER:
+        buffer = ctypes.create_string_buffer(size)
+        if kernel32.GetFileInformationByHandleEx(handle, _FILE_STREAM_INFO_CLASS, buffer, size):
+            return _parse_streams(buffer.raw)
+        if ctypes.get_last_error() != _ERROR_MORE_DATA:
+            return None
+        size *= 2
+    return None
+
+
+def _read_link_count(kernel32: ctypes.WinDLL, handle: int) -> int | None:
+    info = _StandardInfo()
+    ok = kernel32.GetFileInformationByHandleEx(
+        handle,
+        _FILE_STANDARD_INFO_CLASS,
+        ctypes.byref(info),
+        ctypes.sizeof(info),
+    )
+    return int(info.number_of_links) if ok else None
+
+
+def probe_file(path: str) -> tuple[tuple[str, ...] | None, int | None]:
+    """Return ``(alternate_streams, hard_link_count)`` for *path*.
+
+    Both values are ``None`` when unknown (non-Windows host, unreadable handle). One
+    handle covers both queries, so scanning a large tree pays for a single open.
+    """
+    kernel32, handle = _open_attributes_handle(path)
+    if kernel32 is None or handle is None:
+        return None, None
+    try:
+        return _read_streams(kernel32, handle), _read_link_count(kernel32, handle)
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def list_alternate_streams(path: str) -> tuple[str, ...] | None:
+    """Return the alternate stream names of *path*, or ``None`` when unknown.
+
+    ``None`` means "could not decide" (non-Windows host, unreadable handle). Callers
+    must treat it as *unknown*, not as "clean": iron rule 10 forbids pretending a
+    check succeeded when it did not. The scanner records that as a warning-free
+    unknown today; the limitation is listed in ``docs/HANDOFF.md``.
+    """
+    kernel32, handle = _open_attributes_handle(path)
+    if kernel32 is None or handle is None:
         return None
     try:
-        size = 4096
-        while size <= _MAX_BUFFER:
-            buffer = ctypes.create_string_buffer(size)
-            if kernel32.GetFileInformationByHandleEx(
-                handle,
-                _FILE_STREAM_INFO_CLASS,
-                buffer,
-                size,
-            ):
-                return _parse_streams(buffer.raw)
-            if ctypes.get_last_error() != _ERROR_MORE_DATA:
-                return None
-            size *= 2
-        return None
+        return _read_streams(kernel32, handle)
     finally:
         kernel32.CloseHandle(handle)

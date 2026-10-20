@@ -34,7 +34,7 @@ LAYERS = (
 )
 
 #: Layers that have a real implementation today. The rest are intentional placeholders.
-IMPLEMENTED_LAYERS = frozenset({"scanning", "rules", "safety", "planning"})
+IMPLEMENTED_LAYERS = frozenset({"scanning", "rules", "safety", "planning", "journal", "execution"})
 
 # Anything that would drag Qt, a GUI toolkit, or a network stack into Core.
 FORBIDDEN_IMPORT_ROOTS = frozenset(
@@ -112,7 +112,7 @@ def test_cli_version_output() -> None:
     assert tidymate_core.__version__ in result.stdout
 
 
-def test_cli_exposes_only_read_only_commands() -> None:
+def test_cli_exposes_the_expected_commands() -> None:
     # typer leaves CommandInfo.name as None when it derives the name from the function.
     names: set[str] = set()
     for command in app.registered_commands:
@@ -120,14 +120,18 @@ def test_cli_exposes_only_read_only_commands() -> None:
             names.add(command.name)
         elif command.callback is not None:
             names.add(str(command.callback.__name__))
-    assert names == {"status", "plan"}, f"stage 4 may only expose read-only commands, found {names}"
+    assert names == {"status", "plan", "apply"}, f"unexpected CLI surface: {names}"
+
+
+def test_apply_is_not_reachable_without_a_batch_id() -> None:
+    result = CliRunner().invoke(app, ["apply"])
+    assert result.exit_code != 0, "apply must require an explicit batch id"
 
 
 def test_cli_status_is_honest() -> None:
     result = CliRunner().invoke(app, ["status"])
     assert result.exit_code == 0
-    assert "stage           : 4" in result.stdout
-    assert "read-only" in result.stdout
-    assert "write commands  : none" in result.stdout
+    assert "stage           : 5-6" in result.stdout
+    assert "write commands  : apply" in result.stdout
     assert "planning        : templates" in result.stdout
-    assert "journal         : not implemented yet" in result.stdout
+    assert "journal         : SQLite" in result.stdout

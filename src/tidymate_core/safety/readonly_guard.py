@@ -2,9 +2,8 @@
 
 Stages 1-2 were fully read-only. Stages 3-4 added a single, narrow write path - exporting
 ``plan.json`` and ``report.md`` - because a dry-run that cannot be exported is not
-reviewable. That exception lives in exactly one module and is listed in
-:data:`ALLOWED_MODULES`; everything else stays write-free, and the executor stage will add
-its own reviewed entry when it lands.
+reviewable. Stage 5-6 adds exactly two more reviewed entries: the executor (moves, copies,
+recycles) and the journal (SQLite). Everything else stays write-free.
 
 The guard parses the AST rather than grepping text, which keeps ``str.replace`` and
 ``dict.update`` out of the results while still catching ``Path.write_text`` and
@@ -28,6 +27,10 @@ ALLOWED_MODULES: frozenset[str] = frozenset(
     {
         # stages 3-4: dry-run artifacts only, confined to the plan's output root
         "tidymate_core/planning/artifacts.py",
+        # stage 5-6: the only module that moves/copies files, gated and journaled
+        "tidymate_core/execution/executor.py",
+        # stage 5-6: SQLite write-ahead journal (creates its own directory/database)
+        "tidymate_core/journal/db.py",
     },
 )
 

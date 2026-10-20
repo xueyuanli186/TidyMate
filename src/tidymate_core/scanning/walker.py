@@ -124,6 +124,7 @@ def build_entry(
     stat_result: os.stat_result,
     *,
     alternate_streams: tuple[str, ...] = (),
+    link_count: int | None = None,
 ) -> FileEntry:
     """Create a :class:`FileEntry` from a stat result (pure, testable).
 
@@ -158,6 +159,10 @@ def build_entry(
         | FileAttributes.OFFLINE
     ):
         flags |= ErrorFlags.ONEDRIVE_PLACEHOLDER
+    if attributes & FileAttributes.SPARSE_FILE:
+        flags |= ErrorFlags.SPARSE
+    if link_count is not None and link_count > 1:
+        flags |= ErrorFlags.HARDLINK
     if alternate_streams:
         flags |= ErrorFlags.ADS
 
@@ -176,6 +181,7 @@ def build_entry(
         path_length=length,
         error_flags=flags,
         alternate_streams=alternate_streams,
+        link_count=link_count,
     )
 
 
@@ -341,8 +347,9 @@ def _process_entry(
         return None
 
     streams_found: tuple[str, ...] = ()
+    link_count: int | None = None
     if config.detect_alternate_streams:
-        detected = stream_probe.list_alternate_streams(full_path)
+        detected, link_count = stream_probe.probe_file(full_path)
         if detected:
             streams_found = detected
 
@@ -351,6 +358,7 @@ def _process_entry(
         entry.name,
         stat_result,
         alternate_streams=streams_found,
+        link_count=link_count,
     )
 
 

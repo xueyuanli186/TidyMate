@@ -29,6 +29,8 @@ class FileAttributes(IntFlag):
     ARCHIVE = 0x0020
     REPARSE_POINT = 0x0400
     OFFLINE = 0x1000
+    #: Sparse file: allocated size can differ from logical size.
+    SPARSE_FILE = 0x0200
     RECALL_ON_OPEN = 0x00040000
     RECALL_ON_DATA_ACCESS = 0x00400000
 
@@ -52,6 +54,10 @@ class ErrorFlags(IntFlag):
     ADS = 1 << 7
     #: Cloud placeholder that is not fully hydrated (OneDrive "online-only").
     ONEDRIVE_PLACEHOLDER = 1 << 8
+    #: More than one hard link points at the same file data.
+    HARDLINK = 1 << 9
+    #: Sparse file (``FILE_ATTRIBUTE_SPARSE_FILE``).
+    SPARSE = 1 << 10
 
 
 class ScanErrorKind(StrEnum):
@@ -85,12 +91,19 @@ class FileEntry:
     error_flags: ErrorFlags
     #: Non-default NTFS streams, e.g. ``("Zone.Identifier",)``. Empty when unknown or clean.
     alternate_streams: tuple[str, ...] = ()
+    #: ``nNumberOfLinks`` from the OS; ``None`` when it could not be read.
+    link_count: int | None = None
 
     def __post_init__(self) -> None:
         if self.mtime_utc.tzinfo is None:
             raise ValueError("mtime_utc must be timezone aware")
         if self.mtime_utc.utcoffset() is None:
             raise ValueError("mtime_utc must have a UTC offset")
+
+    @property
+    def is_hard_link(self) -> bool:
+        """True when more than one directory entry points at this file's data."""
+        return self.link_count is not None and self.link_count > 1
 
     @property
     def has_alternate_streams(self) -> bool:

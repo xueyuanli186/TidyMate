@@ -48,6 +48,8 @@ _SPECIAL_FLAGS: tuple[ErrorFlags, ...] = (
     ErrorFlags.OFFLINE,
     ErrorFlags.ADS,
     ErrorFlags.ONEDRIVE_PLACEHOLDER,
+    ErrorFlags.HARDLINK,
+    ErrorFlags.SPARSE,
 )
 
 #: Human guidance attached to the two "do not touch this yet" skip kinds. The text is
@@ -78,6 +80,10 @@ class PlanRequest:
     #: this to inject entries whose OS attributes cannot be produced on demand, e.g. a
     #: OneDrive placeholder - Windows refuses to set ``RECALL_ON_DATA_ACCESS`` by hand.
     entries: tuple[FileEntry, ...] | None = None
+    #: CLI/GUI-wide override of every rule's conflict policy. ``None`` keeps per-rule values.
+    conflict_override: ConflictPolicy | None = None
+    #: Let read-only files into the plan; the executor clears the bit before touching them.
+    clear_readonly: bool = False
 
 
 def _system_local_tz() -> tzinfo:
@@ -89,10 +95,14 @@ def _entry_flags(entry: FileEntry) -> tuple[str, ...]:
     return tuple((flag.name or "").lower() for flag in _SPECIAL_FLAGS if entry.error_flags & flag)
 
 
-def _special_reason(entry: FileEntry) -> str | None:
+def _special_reason(entry: FileEntry, *, clear_readonly: bool = False) -> str | None:
     """Return why a special file is refused, or ``None`` for an ordinary file."""
-    if entry.is_read_only:
+    if entry.is_read_only and not clear_readonly:
         return "read-only file: skipped by default (iron rule 8)"
+    if entry.is_hard_link:
+        return f"hard link ({entry.link_count} links): moving it would split the link set"
+    if entry.error_flags & ErrorFlags.SPARSE:
+        return "sparse file: copying it would materialise the holes"
     if entry.error_flags & ErrorFlags.SYSTEM:
         return "system-flagged file: skipped by default (iron rule 8)"
     if entry.is_reparse_point:
@@ -192,7 +202,7 @@ def _plan_one(
             ),
         )
 
-    special = _special_reason(entry)
+    special = _special_reason(entry, clear_readonly=request.clear_readonly)
     if special is not None:
         return _make_change(
             entry,
@@ -260,8 +270,9 @@ def _plan_one(
     if target.requires_extended:
         notes.append(f"long target path ({target.length} chars); requires the \\\\?\\ form")
 
+    policy = request.conflict_override or rule.action.conflict
     if conflicts_on_disk(target.display):
-        if rule.action.conflict is ConflictPolicy.SKIP:
+        if policy is ConflictPolicy.SKIP:
             return _make_change(
                 entry,
                 rule,
@@ -271,7 +282,7 @@ def _plan_one(
                 conflict=ConflictType.EXISTS_ON_DISK,
                 notes=tuple(notes),
             )
-        if rule.action.conflict is ConflictPolicy.ASK:
+        if policy is ConflictPolicy.ASK:
             return _make_change(
                 entry,
                 rule,
@@ -426,6 +437,17 @@ def _build_stats(
     )
 
 
+def _override_warnings(request: PlanRequest) -> tuple[str, ...]:
+    override = request.conflict_override
+    if override is None:
+        return ()
+    if override is ConflictPolicy.RENAME:
+        return (
+            "conflict policy overridden to 'rename': existing files are renamed, never overwritten",
+        )
+    return (f"conflict policy overridden to {override.value!r}",)
+
+
 def build_plan(request: PlanRequest) -> Plan:
     """Scan, match and build the complete dry-run plan."""
     created = request.created_at or utc_now()
@@ -457,5 +479,86 @@ def build_plan(request: PlanRequest) -> Plan:
         changes=marked,
         stats=stats,
         plan_hash=plan_hash,
-        warnings=tuple(request.rules.warnings) + scan_errors,
+        warnings=tuple(request.rules.warnings) + scan_errors + _override_warnings(request),
+    )
+
+
+def _payload_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"plan payload field {field!r} must be an integer")
+    return value
+
+
+def _payload_str_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    return tuple(str(item) for item in value)
+
+
+def change_from_dict(data: dict[str, object]) -> PlannedChange:
+    """Rebuild one change from ``plan.json``-style data (journal replay)."""
+    raw_reason = data.get("reason")
+    raw_dst = data.get("dst")
+    raw_op = data.get("op")
+    raw_rule = data.get("rule_id")
+    raw_kind = data.get("error_kind")
+    return PlannedChange(
+        seq=_payload_int(data.get("seq"), field="seq"),
+        src=str(data["src"]),
+        dst=str(raw_dst) if raw_dst is not None else None,
+        op=str(raw_op) if raw_op is not None else None,
+        rule_id=str(raw_rule) if raw_rule is not None else None,
+        status=ChangeStatus(str(data["status"])),
+        conflict=ConflictType(str(data["conflict"])),
+        reason=RejectReason(str(raw_reason)) if raw_reason is not None else None,
+        flags=_payload_str_tuple(data.get("flags")),
+        notes=_payload_str_tuple(data.get("notes")),
+        size=_payload_int(data.get("size", 0), field="size"),
+        error_kind=str(raw_kind) if raw_kind is not None else None,
+    )
+
+
+def plan_from_dict(payload: dict[str, object]) -> Plan:
+    """Rebuild a :class:`Plan` from the dictionary written by :func:`plan_to_dict`."""
+    raw_changes = payload.get("changes")
+    raw_stats = payload.get("stats")
+    if not isinstance(raw_changes, (list, tuple)) or not isinstance(raw_stats, dict):
+        raise ValueError("plan payload is missing changes/stats")
+    stats = PlanStats(
+        total_scanned=_payload_int(raw_stats["total_scanned"], field="total_scanned"),
+        matched=_payload_int(raw_stats["matched"], field="matched"),
+        will_execute=_payload_int(raw_stats["will_execute"], field="will_execute"),
+        will_skip=_payload_int(raw_stats["will_skip"], field="will_skip"),
+        rejected=_payload_int(raw_stats["rejected"], field="rejected"),
+        conflicts=_payload_int(raw_stats["conflicts"], field="conflicts"),
+        conflicts_exists=_payload_int(raw_stats["conflicts_exists"], field="conflicts_exists"),
+        conflicts_intra=_payload_int(raw_stats["conflicts_intra"], field="conflicts_intra"),
+        conflicts_review=_payload_int(raw_stats["conflicts_review"], field="conflicts_review"),
+        bytes_freed=_payload_int(raw_stats["bytes_freed"], field="bytes_freed"),
+        bytes_added=_payload_int(raw_stats["bytes_added"], field="bytes_added"),
+        by_rule={
+            str(k): _payload_int(v, field="by_rule")
+            for k, v in dict(raw_stats.get("by_rule", {})).items()
+        },
+        failed=_payload_int(raw_stats.get("failed", 0), field="failed"),
+        ads_skipped=_payload_int(raw_stats.get("ads_skipped", 0), field="ads_skipped"),
+        onedrive_skipped=_payload_int(
+            raw_stats.get("onedrive_skipped", 0),
+            field="onedrive_skipped",
+        ),
+    )
+    created = payload.get("created_at")
+    if not isinstance(created, str):
+        raise ValueError("plan payload has no created_at string")
+    return Plan(
+        batch_id=str(payload["batch_id"]),
+        created_at=datetime.fromisoformat(created),
+        output_root=str(payload["output_root"]),
+        rules_source=str(payload["rules_source"]),
+        changes=tuple(
+            change_from_dict(change) for change in raw_changes if isinstance(change, dict)
+        ),
+        stats=stats,
+        plan_hash=str(payload["plan_hash"]),
+        warnings=_payload_str_tuple(payload.get("warnings")),
     )

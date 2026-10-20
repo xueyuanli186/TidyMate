@@ -62,6 +62,11 @@ def test_function_has_no_disable_parameter() -> None:
     assert list(signature.parameters) == ["path"]
 
 
-@pytest.mark.parametrize("bad", ["", "C:"])
+@pytest.mark.parametrize("bad", [""])
 def test_degenerate_paths_do_not_crash(bad: str) -> None:
     assert blacklist.check_blacklisted(bad) is None
+
+
+def test_bare_drive_is_treated_as_its_root() -> None:
+    # "C:" and "C:\\" are the same location; both must be refused as a drive root.
+    assert blacklist.check_blacklisted("C:") == "drive root itself"
