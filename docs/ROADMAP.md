@@ -28,7 +28,12 @@
   （文件对话框、拖列宽、导出流程）尚未验证。
 - `trash` 的撤销能力边界尚未验证（依赖 Shell 接口）。
 - 符号链接（真正的 symlink）未实测，用 junction 覆盖了 reparse point 路径。
-- ADS / OneDrive 占位文件只识别属性位，没有"跳过并分类"的策略（属执行前安全校验）。
+- ~~ADS / OneDrive 占位文件只识别属性位，没有"跳过并分类"的策略~~ **已处理
+  （2026-10-20，阶段 3-4 返工）**：ADS 用 `GetFileInformationByHandleEx(FileStreamInfo)`
+  检测，OneDrive 用 `OFFLINE` / `RECALL_ON_OPEN` / `RECALL_ON_DATA_ACCESS` 属性位；两者
+  默认 `skip`，`error_kind` 为 `ads` / `onedrive_placeholder`，报告单独分组。
+  限制：句柄打不开时按"无法判定"处理（不标 ADS），见 `docs/validation/STAGE-3-4-P0.md`。
 - `path_glob` 匹配完整绝对路径，`*.txt` 这类相对写法匹配不到任何文件，必须写 `**/`。
 - GUI 需要 `pip install -e ".[gui]"`；未安装时 GUI 测试 skip。
-- `conflict: rename` 只做单条候选名，没有批量重命名规划。
+- `conflict: rename` 已实现 999 次候选 + 时间戳退化（见 STAGE-3-4-P0 报告）；批量重命名
+  规划仍未做。

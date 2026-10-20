@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Protocol, cast
 
 from tidymate_core.safety import paths
+from tidymate_core.scanning import streams as stream_probe
 from tidymate_core.scanning.cancel import CHECK_INTERVAL, CancelToken
 from tidymate_core.scanning.config import ScanConfig
 from tidymate_core.scanning.models import (
@@ -117,8 +118,18 @@ def _file_attributes(stat_result: os.stat_result) -> FileAttributes:
     return FileAttributes(int(raw)) if raw else FileAttributes.NONE
 
 
-def build_entry(parent: str, name: str, stat_result: os.stat_result) -> FileEntry:
-    """Create a :class:`FileEntry` from a stat result (pure, testable)."""
+def build_entry(
+    parent: str,
+    name: str,
+    stat_result: os.stat_result,
+    *,
+    alternate_streams: tuple[str, ...] = (),
+) -> FileEntry:
+    """Create a :class:`FileEntry` from a stat result (pure, testable).
+
+    ``alternate_streams`` is passed in rather than probed here so this function stays
+    free of OS calls; :func:`_process_entry` owns the handle-based detection.
+    """
     full_path = paths.join(parent, name)
     name_path = Path(name)
     stem, ext = name_path.stem, name_path.suffix
@@ -141,6 +152,14 @@ def build_entry(parent: str, name: str, stat_result: os.stat_result) -> FileEntr
         flags |= ErrorFlags.UNC
     if attributes & FileAttributes.OFFLINE:
         flags |= ErrorFlags.OFFLINE
+    if attributes & (
+        FileAttributes.RECALL_ON_DATA_ACCESS
+        | FileAttributes.RECALL_ON_OPEN
+        | FileAttributes.OFFLINE
+    ):
+        flags |= ErrorFlags.ONEDRIVE_PLACEHOLDER
+    if alternate_streams:
+        flags |= ErrorFlags.ADS
 
     return FileEntry(
         full_path=full_path,
@@ -156,6 +175,7 @@ def build_entry(parent: str, name: str, stat_result: os.stat_result) -> FileEntr
         is_read_only=bool(attributes & FileAttributes.READ_ONLY),
         path_length=length,
         error_flags=flags,
+        alternate_streams=alternate_streams,
     )
 
 
@@ -320,7 +340,18 @@ def _process_entry(
         counters.skipped += 1
         return None
 
-    return build_entry(current, entry.name, stat_result)
+    streams_found: tuple[str, ...] = ()
+    if config.detect_alternate_streams:
+        detected = stream_probe.list_alternate_streams(full_path)
+        if detected:
+            streams_found = detected
+
+    return build_entry(
+        current,
+        entry.name,
+        stat_result,
+        alternate_streams=streams_found,
+    )
 
 
 def scan(

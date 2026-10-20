@@ -125,6 +125,7 @@ def test_plan_to_dict_has_the_required_fields() -> None:
         "status",
         "conflict",
         "reason",
+        "error_kind",
         "flags",
         "notes",
         "size",
@@ -154,7 +155,15 @@ def test_table_truncates_long_plans() -> None:
 
 def test_markdown_has_every_required_section() -> None:
     report = render_markdown(make_plan())
-    for heading in ("## 摘要", "## 冲突", "## 拒绝项", "## 将执行", "## 按规则分组"):
+    for heading in (
+        "## 摘要",
+        "## 已跳过：ADS / OneDrive 占位",
+        "## 冲突",
+        "## 拒绝项",
+        "## 失败项",
+        "## 将执行",
+        "## 按规则分组",
+    ):
         assert heading in report
     assert "⚠️" in report
     assert "本次没有修改任何文件" in report

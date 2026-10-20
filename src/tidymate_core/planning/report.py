@@ -13,7 +13,12 @@ from __future__ import annotations
 import json
 
 from tidymate_core.planning.models import ChangeStatus, ConflictType, Plan, PlannedChange
-from tidymate_core.planning.planner import change_to_dict, stats_to_dict
+from tidymate_core.planning.planner import (
+    ADS_GUIDANCE,
+    ONEDRIVE_GUIDANCE,
+    change_to_dict,
+    stats_to_dict,
+)
 
 _CONFLICT_LABEL: dict[ConflictType, str] = {
     ConflictType.NONE: "-",
@@ -26,6 +31,7 @@ _STATUS_LABEL: dict[ChangeStatus, str] = {
     ChangeStatus.EXECUTE: "execute",
     ChangeStatus.SKIP: "skip",
     ChangeStatus.REJECT: "reject",
+    ChangeStatus.FAILED: "failed",
 }
 
 
@@ -126,6 +132,31 @@ def _conflict_section(plan: Plan, conflict: ConflictType, title: str) -> list[st
     return lines
 
 
+def _safety_skip_section(plan: Plan) -> list[str]:
+    """ADS / OneDrive entries, with the exact manual steps the user must take."""
+    entries = [
+        *plan.skipped_with_kind("ads"),
+        *plan.skipped_with_kind("onedrive_placeholder"),
+    ]
+    if not entries:
+        return ["_none_", ""]
+    lines = [
+        "> 这两类文件**移动会损坏原始数据**，因此默认跳过；进入执行阶段后也不得触碰。",
+        "",
+        f"- ADS：{ADS_GUIDANCE}",
+        f"- OneDrive：{ONEDRIVE_GUIDANCE}",
+        "",
+        "| seq | 类型 | source | 说明 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for change in entries:
+        kind = "ADS" if change.error_kind == "ads" else "OneDrive 占位"
+        detail = change.notes[0] if change.notes else "-"
+        lines.append(f"| {change.seq} | {kind} | `{change.src}` | {detail} |")
+    lines.append("")
+    return lines
+
+
 def render_markdown(plan: Plan) -> str:
     """Render the human-readable ``report.md``."""
     stats = plan.stats
@@ -142,6 +173,9 @@ def render_markdown(plan: Plan) -> str:
         "",
         "## 摘要",
         "",
+        "> 字节变化口径：仅包含 trash 释放空间 + copy 占用空间，move/rename 未计入"
+        "（前者不改变磁盘占用，后者仅改名）。",
+        "",
         "| 指标 | 数值 |",
         "| --- | --- |",
         f"| 总扫描数 | {stats.total_scanned} |",
@@ -149,6 +183,9 @@ def render_markdown(plan: Plan) -> str:
         f"| 将执行数 | {stats.will_execute} |",
         f"| 将跳过数 | {stats.will_skip} |",
         f"| 拒绝数 | {stats.rejected} |",
+        f"| 失败数 | {stats.failed} |",
+        f"| ├ ADS 跳过 | {stats.ads_skipped} |",
+        f"| └ OneDrive 占位跳过 | {stats.onedrive_skipped} |",
         f"| 冲突总数 | {stats.conflicts} |",
         f"| ├ 与磁盘已存在冲突 | {stats.conflicts_exists} |",
         f"| ├ 批内同名冲突 | {stats.conflicts_intra} |",
@@ -156,8 +193,9 @@ def render_markdown(plan: Plan) -> str:
         f"| 预计释放空间（trash） | {stats.bytes_freed} 字节 |",
         f"| 预计新增占用（copy） | {stats.bytes_added} 字节 |",
         "",
-        "`move` 与 `rename` 不改变总占用空间，因此不计入释放/占用。",
+        "## 已跳过：ADS / OneDrive 占位",
         "",
+        *_safety_skip_section(plan),
         "## 冲突（必须人工处理）",
         "",
     ]
@@ -191,6 +229,18 @@ def render_markdown(plan: Plan) -> str:
             reason = change.reason.value if change.reason is not None else "-"
             notes = "<br>".join(change.notes) or "-"
             lines.append(f"| {change.seq} | `{change.src}` | **{reason}** | {notes} |")
+    else:
+        lines.append("_none_")
+    lines.append("")
+
+    failed = plan.failed()
+    lines.extend([f"## 失败项 ({len(failed)})", ""])
+    if failed:
+        lines.extend(["| seq | source | 原因 | 说明 |", "| --- | --- | --- | --- |"])
+        for change in failed:
+            kind = change.error_kind or "failed"
+            notes = "<br>".join(change.notes) or "-"
+            lines.append(f"| {change.seq} | `{change.src}` | **{kind}** | {notes} |")
     else:
         lines.append("_none_")
     lines.append("")

@@ -48,6 +48,10 @@ class ErrorFlags(IntFlag):
     HIDDEN = 1 << 4
     UNC = 1 << 5
     OFFLINE = 1 << 6
+    #: NTFS alternate data streams present (``Zone.Identifier`` included).
+    ADS = 1 << 7
+    #: Cloud placeholder that is not fully hydrated (OneDrive "online-only").
+    ONEDRIVE_PLACEHOLDER = 1 << 8
 
 
 class ScanErrorKind(StrEnum):
@@ -79,12 +83,34 @@ class FileEntry:
     is_read_only: bool
     path_length: int
     error_flags: ErrorFlags
+    #: Non-default NTFS streams, e.g. ``("Zone.Identifier",)``. Empty when unknown or clean.
+    alternate_streams: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.mtime_utc.tzinfo is None:
             raise ValueError("mtime_utc must be timezone aware")
         if self.mtime_utc.utcoffset() is None:
             raise ValueError("mtime_utc must have a UTC offset")
+
+    @property
+    def has_alternate_streams(self) -> bool:
+        """True when at least one non-default NTFS stream was found."""
+        return bool(self.alternate_streams)
+
+    @property
+    def is_onedrive_placeholder(self) -> bool:
+        """True when the file is a cloud placeholder that is not fully local.
+
+        ``RECALL_ON_DATA_ACCESS`` / ``RECALL_ON_OPEN`` / ``OFFLINE`` are set by the
+        cloud filter driver. Moving such a file out of the synced tree without
+        hydrating it first can leave a 0-byte placeholder behind.
+        """
+        placeholder = (
+            FileAttributes.RECALL_ON_DATA_ACCESS
+            | FileAttributes.RECALL_ON_OPEN
+            | FileAttributes.OFFLINE
+        )
+        return bool(self.attributes & placeholder)
 
     @property
     def is_long_path(self) -> bool:

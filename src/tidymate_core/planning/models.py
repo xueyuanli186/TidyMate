@@ -17,6 +17,10 @@ class ChangeStatus(StrEnum):
     EXECUTE = "execute"
     SKIP = "skip"
     REJECT = "reject"
+    #: A step that was attempted on paper and cannot be completed (e.g. every fallback
+    #: name for a ``conflict: rename`` is taken). Distinct from ``reject``: the input was
+    #: valid, the environment refused it.
+    FAILED = "failed"
 
 
 class ConflictType(StrEnum):
@@ -55,6 +59,9 @@ class PlannedChange:
     flags: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
     size: int = 0
+    #: Machine-readable sub-reason for skips the executor must not silently perform:
+    #: ``"ads"``, ``"onedrive_placeholder"`` or ``"rename_exhausted"``.
+    error_kind: str | None = None
 
     @property
     def is_executable(self) -> bool:
@@ -78,6 +85,12 @@ class PlanStats:
     bytes_freed: int
     bytes_added: int
     by_rule: dict[str, int] = field(default_factory=dict)
+    #: Entries that could not be planned at all (``ChangeStatus.FAILED``).
+    failed: int = 0
+    #: Skipped because an NTFS alternate data stream would be lost on move.
+    ads_skipped: int = 0
+    #: Skipped because the file is a OneDrive/cloud placeholder that is not hydrated.
+    onedrive_skipped: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,3 +117,15 @@ class Plan:
     def rejected(self) -> tuple[PlannedChange, ...]:
         """Entries refused outright."""
         return tuple(change for change in self.changes if change.status is ChangeStatus.REJECT)
+
+    def failed(self) -> tuple[PlannedChange, ...]:
+        """Entries that could not be planned even after every fallback."""
+        return tuple(change for change in self.changes if change.status is ChangeStatus.FAILED)
+
+    def skipped_with_kind(self, kind: str) -> tuple[PlannedChange, ...]:
+        """Skipped entries carrying one machine-readable ``error_kind``."""
+        return tuple(
+            change
+            for change in self.changes
+            if change.status is ChangeStatus.SKIP and change.error_kind == kind
+        )

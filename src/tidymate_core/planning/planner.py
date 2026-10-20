@@ -46,6 +46,21 @@ _SPECIAL_FLAGS: tuple[ErrorFlags, ...] = (
     ErrorFlags.HIDDEN,
     ErrorFlags.UNC,
     ErrorFlags.OFFLINE,
+    ErrorFlags.ADS,
+    ErrorFlags.ONEDRIVE_PLACEHOLDER,
+)
+
+#: Human guidance attached to the two "do not touch this yet" skip kinds. The text is
+#: part of the report contract, not a log line: users act on it.
+ADS_GUIDANCE = (
+    "NTFS alternate data stream present (e.g. Zone.Identifier): moving the file can "
+    "drop the stream. Inspect it with Sysinternals Streams (streams -s <file>) and "
+    "decide whether to clear it (streams -d <file>) before organising."
+)
+ONEDRIVE_GUIDANCE = (
+    "OneDrive/cloud placeholder not fully downloaded: moving it can leave a 0-byte "
+    "placeholder and corrupt the original. In the OneDrive client choose "
+    '"Always keep on this device", wait for the download to finish, then re-run.'
 )
 
 
@@ -59,6 +74,10 @@ class PlanRequest:
     created_at: datetime | None = None
     local_tz: tzinfo | None = None
     now: datetime | None = None
+    #: Pre-scanned entries. ``None`` means "run the scan" (the normal path). Tests use
+    #: this to inject entries whose OS attributes cannot be produced on demand, e.g. a
+    #: OneDrive placeholder - Windows refuses to set ``RECALL_ON_DATA_ACCESS`` by hand.
+    entries: tuple[FileEntry, ...] | None = None
 
 
 def _system_local_tz() -> tzinfo:
@@ -93,6 +112,7 @@ def _make_change(
     conflict: ConflictType = ConflictType.NONE,
     reason: RejectReason | None = None,
     notes: tuple[str, ...] = (),
+    error_kind: str | None = None,
 ) -> PlannedChange:
     return PlannedChange(
         seq=seq,
@@ -106,17 +126,29 @@ def _make_change(
         flags=_entry_flags(entry),
         notes=notes,
         size=entry.size,
+        error_kind=error_kind,
     )
 
 
-def _next_available(target: str) -> str | None:
-    """Return ``name (2).ext``, ``name (3).ext``... that does not exist yet."""
+def _next_available(target: str, *, now: datetime) -> str | None:
+    """Find a free destination name, degrading in two documented steps.
+
+    1. ``name (2).ext`` ... ``name (999).ext``;
+    2. ``name_yyyyMMdd-HHmmss_ffffff.ext`` (the timestamp comes from the plan's
+       ``created_at``, so two dry-runs over the same tree still hash identically);
+    3. give up and return ``None`` - the caller marks the entry ``failed``.
+    """
     target_path = PureWindowsPath(target)
     stem, extension = str(target_path.with_suffix("")), target_path.suffix
     for index in range(2, 1000):
         candidate = f"{stem} ({index}){extension}"
         if not conflicts_on_disk(candidate):
             return candidate
+
+    stamp = now.astimezone(UTC).strftime("%Y%m%d-%H%M%S_%f")
+    fallback = f"{stem}_{stamp}{extension}"
+    if not conflicts_on_disk(fallback):
+        return fallback
     return None
 
 
@@ -125,10 +157,40 @@ def _plan_one(
     entry: FileEntry,
     request: PlanRequest,
     local_tz: tzinfo,
+    created: datetime,
 ) -> PlannedChange | None:
     rule = request.rules.match(entry, now=request.now)
     if rule is None:
         return None
+
+    # ADS and cloud placeholders are *skips*, not rejects: the file is fine where it is,
+    # and a move is what would damage it. The executor must never touch these (stage 5).
+    if entry.has_alternate_streams:
+        streams = ", ".join(entry.alternate_streams)
+        detail = f"alternate data stream(s): {streams}"
+        if entry.is_onedrive_placeholder:
+            detail += "; the file is also a cloud placeholder"
+        return _make_change(
+            entry,
+            rule,
+            seq,
+            status=ChangeStatus.SKIP,
+            error_kind="ads",
+            notes=(detail, ADS_GUIDANCE),
+        )
+    if entry.is_onedrive_placeholder:
+        return _make_change(
+            entry,
+            rule,
+            seq,
+            status=ChangeStatus.SKIP,
+            error_kind="onedrive_placeholder",
+            notes=(
+                "cloud placeholder attributes (OFFLINE / RECALL_ON_OPEN / "
+                "RECALL_ON_DATA_ACCESS): the file is not fully local",
+                ONEDRIVE_GUIDANCE,
+            ),
+        )
 
     special = _special_reason(entry)
     if special is not None:
@@ -219,16 +281,21 @@ def _plan_one(
                 conflict=ConflictType.NEEDS_REVIEW,
                 notes=(*notes, "conflict policy 'ask': needs a human decision"),
             )
-        candidate = _next_available(target.display)
+        candidate = _next_available(target.display, now=created)
         if candidate is None:
             return _make_change(
                 entry,
                 rule,
                 seq,
                 dst=target.display,
-                status=ChangeStatus.SKIP,
+                status=ChangeStatus.FAILED,
                 conflict=ConflictType.EXISTS_ON_DISK,
-                notes=(*notes, "no free name found after 998 attempts"),
+                error_kind="rename_exhausted",
+                notes=(
+                    *notes,
+                    "rename exhausted: 'name (2..999)' and the timestamp fallback are "
+                    "both taken; resolve the destination by hand",
+                ),
             )
         notes.append(
             f"renamed to avoid an existing file: {PureWindowsPath(candidate).name}",
@@ -278,6 +345,7 @@ def change_to_dict(change: PlannedChange) -> dict[str, object]:
         "status": change.status.value,
         "conflict": change.conflict.value,
         "reason": change.reason.value if change.reason is not None else None,
+        "error_kind": change.error_kind,
         "flags": list(change.flags),
         "notes": list(change.notes),
         "size": change.size,
@@ -297,6 +365,9 @@ def stats_to_dict(stats: PlanStats) -> dict[str, object]:
         "conflicts_review": stats.conflicts_review,
         "bytes_freed": stats.bytes_freed,
         "bytes_added": stats.bytes_added,
+        "failed": stats.failed,
+        "ads_skipped": stats.ads_skipped,
+        "onedrive_skipped": stats.onedrive_skipped,
         "by_rule": dict(sorted(stats.by_rule.items())),
     }
 
@@ -322,6 +393,17 @@ def _build_stats(
         will_execute=sum(1 for change in changes if change.is_executable),
         will_skip=sum(1 for change in changes if change.status is ChangeStatus.SKIP),
         rejected=sum(1 for change in changes if change.status is ChangeStatus.REJECT),
+        failed=sum(1 for change in changes if change.status is ChangeStatus.FAILED),
+        ads_skipped=sum(
+            1
+            for change in changes
+            if change.status is ChangeStatus.SKIP and change.error_kind == "ads"
+        ),
+        onedrive_skipped=sum(
+            1
+            for change in changes
+            if change.status is ChangeStatus.SKIP and change.error_kind == "onedrive_placeholder"
+        ),
         conflicts=sum(1 for change in changes if change.conflict is not ConflictType.NONE),
         conflicts_exists=sum(
             1 for change in changes if change.conflict is ConflictType.EXISTS_ON_DISK
@@ -349,19 +431,23 @@ def build_plan(request: PlanRequest) -> Plan:
     created = request.created_at or utc_now()
     local_tz = request.local_tz or _system_local_tz()
 
-    result = scan(request.scan)
-    entries = sorted(result.entries, key=lambda entry: entry.normalized_path.casefold())
+    scan_errors: tuple[str, ...] = ()
+    if request.entries is not None:
+        entries = sorted(request.entries, key=lambda entry: entry.normalized_path.casefold())
+    else:
+        result = scan(request.scan)
+        entries = sorted(result.entries, key=lambda entry: entry.normalized_path.casefold())
+        scan_errors = tuple(error.message for error in result.errors)
 
     changes: list[PlannedChange] = []
     for seq, entry in enumerate(entries, start=1):
-        change = _plan_one(seq, entry, request, local_tz)
+        change = _plan_one(seq, entry, request, local_tz, created)
         if change is not None:
             changes.append(change)
 
     marked = mark_intra_batch(changes)
     stats = _build_stats(len(entries), marked)
     plan_hash = compute_plan_hash(marked, stats)
-    scan_errors = tuple(error.message for error in result.errors)
 
     return Plan(
         batch_id=f"dryrun-{created.astimezone().strftime('%Y%m%d-%H%M%S')}",

@@ -28,6 +28,10 @@ class ScanConfig:
     max_depth: int | None = None
     max_file_size: int | None = None
     measure_memory: bool = False
+    #: Ask the OS for alternate data streams on every regular file. Costs one extra
+    #: handle per file, so benchmarks may turn it off; the dry-run path keeps it on
+    #: because a stream that vanishes on move is data loss (iron rule 8).
+    detect_alternate_streams: bool = True
 
     def __post_init__(self) -> None:
         if not self.roots:
