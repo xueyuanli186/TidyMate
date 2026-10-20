@@ -37,7 +37,9 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = [
-  "PySide6>=6.7,<7",
+  # Essentials ships QtCore/QtGui/QtWidgets, which is all this app uses. The full
+  # PySide6 wheel also drags in QtWebEngine and other unused megabytes.
+  "PySide6-Essentials>=6.7,<7",
 ]
 dev = [
   "build>=1.2",
