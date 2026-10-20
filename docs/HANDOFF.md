@@ -14,10 +14,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `main` @ `3246284`（阶段 3-4 返工：ADS/OneDrive + rename 退化） |
-| 测试 | `493 passed`（3.3s），覆盖率 `93.01%`（门槛 90%） |
-| 静态检查 | `ruff check` / `ruff format --check`（96 文件）/ `mypy`（81 文件）全过 |
-| 安全闸门 | `check_forbidden_apis.py`：`OK ... 52 scanned files`；`check_readonly.py`：`OK ... 35 product files` |
+| 分支 / 提交 | `main` @ `48f8262`（阶段 5-6：冲突处理 + 执行器） |
+| 测试 | `529 passed`（4.5s），覆盖率 `90.59%`（门槛 90%） |
+| 静态检查 | `ruff check` / `ruff format --check`（104 文件）/ `mypy`（88 文件）全过 |
+| 安全闸门 | `check_forbidden_apis.py`：`OK ... 56 scanned files`；`check_readonly.py`：`OK ... 39 product files` |
 | 版本 | `0.1.0`，唯一来源 `src/tidymate_core/_version.py` |
 
 复现命令（在仓库根目录）：
@@ -47,25 +47,19 @@ python scripts/check_readonly.py
    `onedrive_placeholder`。阶段 5 的执行器必须按 `error_kind` 拒绝执行这两类条目，
    且要在移动前复查（见第 5 节第一条）。
 
-## 4. 下一步：阶段 5，按这个顺序做（一次只推一个 M）
+## 4. 下一步：阶段 6（撤销）
 
-| 顺序 | 里程碑 | 产出 | 完成判据 |
-| --- | --- | --- | --- |
-| 1 | M5.1 日志库 | `journal/`：SQLite（WAL）、`batches` / `operations` 两张表、事务边界 | 建库/迁移/并发读测试；库文件路径可配置 |
-| 2 | M5.2 write-ahead | 每条操作**先写 intent 再动文件**；崩溃后可按库重放/对账 | 注入"写库后、动文件前"崩溃的测试，重开库状态为 `intent` 而非 `done` |
-| 3 | M5.3 执行器 | `execution/`：move / rename / copy / trash（send2trash）、逐项状态机 | 每类操作的成功/失败/回滚测试；trash 只走 send2trash |
-| 4 | M5.4 `--apply` | CLI 二次确认（默认拒绝）、`--yes` 语义 | 非交互环境无 `--yes` 必须失败；管道输入不能代替确认 |
-| 5 | M5.5 统计 | 状态统计从 SQL 聚合，而不是内存计数 | 中断后重开，统计与库一致 |
+阶段 5-6 已把回滚所需的原料写进日志：每条操作的 `src` / `dst` / `final_dst` /
+`state` / `op` 都在 SQLite 里。阶段 6 要做的是：
 
-**阶段 5 硬性验收**（ROADMAP 原文）：全仓 grep 永久删除 API，命中必须为零，或仅出现在
-"回滚 copy 副本且走回收站"的路径上，**并附命令与原始输出**。
+1. `undo <batch_id>`：倒序回滚 `ok` 的条目；move → 移回 `src`，copy → 把副本送回收站，
+   rename → 改回原名，trash → 从回收站还原（能力边界先验证再承诺）。
+2. 回滚本身也要写日志（`operations` 加 `undo_state` 或用独立的 `undo_operations` 表），
+   失败必须如实记录，不能报"已回滚"。
+3. 回滚前重新校验：目标是否存在、源位置是否已被占用；冲突时整条标记 failed。
+4. `apply` 的记录必须能定位到 DB 与 batch，撤销命令要能在同一 DB 上工作。
 
-```powershell
-python scripts/check_forbidden_apis.py   # 期望 OK，且扫描文件数比 51 更多
-```
-
-阶段 5 结束时还要写 `docs/validation/STAGE-5.md`，格式照抄 `STAGE-3-4.md`
-（写盘边界表 → 执行记录 → 真实样例 → 用例对照 → 未验证项 → 复现命令）。
+**仍未做**：GUI 二次确认与 ask 弹窗（阶段 8）、CLI 的 `scan/verify`（阶段 7）。
 
 ## 5. 已知欠缺与坑（别重复踩）
 
