@@ -28,6 +28,9 @@ classifiers = [
 
 # Runtime dependencies are deliberately tiny and network-free (iron rule 9).
 dependencies = [
+  # `regex` is the only way to put a hard timeout on a user-supplied pattern;
+  # the stdlib `re` module cannot do it. No network capability is involved.
+  "regex>=2024.0",
   "typer>=0.12,<1.0",
 ]
 
@@ -76,7 +79,7 @@ pretty = true
 files = ["src", "tests", "scripts", "build"]
 
 [[tool.mypy.overrides]]
-module = ["PySide6.*", "yaml.*"]
+module = ["PySide6.*", "yaml.*", "regex"]
 ignore_missing_imports = true
 
 [tool.ruff]
@@ -115,7 +118,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S603", "ANN201", "ANN001", "PT011"]
-"scripts/**" = ["T201"]      # tools are allowed to print
+"scripts/**" = ["T201", "ARG002"]      # tools are allowed to print; fakes mirror DirEntry
 "scripts/apply_labels.py" = ["T201", "S603"]
 "build/**" = ["T201"]
 "src/tidymate_cli/**" = ["T201", "B008"]  # CLI output is its job; typer.Option in defaults is idiomatic

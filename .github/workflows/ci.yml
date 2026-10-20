@@ -97,6 +97,9 @@ jobs:
       - name: Forbidden delete API scan
         run: python scripts/check_forbidden_apis.py
 
+      - name: Read-only product code scan (no writes in stages 1-2)
+        run: python scripts/check_readonly.py
+
       - name: Sandbox script smoke test
         shell: pwsh
         run: |

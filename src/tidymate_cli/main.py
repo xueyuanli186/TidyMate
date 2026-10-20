@@ -47,7 +47,9 @@ def main(
 def status() -> None:
     """Report what this build can actually do (honest, stage 0)."""
     typer.echo(f"tidymate {__version__}")
-    typer.echo("stage           : 0 (skeleton)")
+    typer.echo("stage           : 2 (scan + rules, read-only)")
+    typer.echo("scanner         : streaming os.scandir, long-path aware, error tolerant")
+    typer.echo("rules           : YAML, all-or-nothing validation, regex timeout 200 ms")
     typer.echo("journal         : not implemented yet")
-    typer.echo("write commands  : none (dry-run only by construction)")
+    typer.echo("write commands  : none (this stage cannot modify anything)")
     typer.echo("network         : disabled (no network dependency is installed)")

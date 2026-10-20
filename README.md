@@ -2,9 +2,10 @@
 
 Windows 本地文件整理器。按规则把散乱文件归入模板目录，**全程可预览、可撤销、默认不联网**。
 
-> **当前状态：阶段 0（骨架），还不能整理任何文件。**
-> 这个仓库现在只有可构建、可测试、CI 可产出 artifact 的空壳。没有扫描、没有规则、
-> 没有移动/删除代码。`tidymate status` 会如实这么告诉你。
+> **当前状态：阶段 2（扫描 + 规则引擎，只读）。还不能整理任何文件。**
+> 现在可以递归扫描目录（流式、长路径、错误容忍）并按 YAML 规则判断"某个文件会被
+> 哪条规则接管"，但**没有任何移动/复制/删除代码**——`python scripts/check_readonly.py`
+> 在 CI 里强制这一点。`tidymate status` 会如实报告当前能力。
 
 ## 为什么值得存在
 
@@ -13,9 +14,10 @@ TidyMate 反过来——先把"不会弄坏你的文件"做扎实，再谈整理
 
 - **默认 Dry-run**：不给 `--apply` 就一个字节都不写。
 - **删除只进回收站**：仓库里有静态扫描（`scripts/check_forbidden_apis.py`）在 CI 里拦截永久删除 API。
+- **只读阶段零写盘**：`scripts/check_readonly.py` 用 AST 扫描产品代码，出现任何写调用即 CI 失败。
 - **先写日志再动文件**：撤销依赖 SQLite 里的批次日志，日志不明的条目不回滚成"成功"。
 - **系统/程序目录硬编码拒绝**，配置关不掉。
-- **默认不联网**：运行时依赖只有 `typer`，没有任何网络客户端。
+- **默认不联网**：运行时依赖只有 `typer` 与 `regex`，没有任何网络客户端。
 
 ## 快速开始（开发者）
 
@@ -31,8 +33,13 @@ python -m pytest
 python -m ruff check .
 python -m mypy
 python scripts/check_forbidden_apis.py
+python scripts/check_readonly.py
 
-# 4. 打包占位产物
+# 4. 扫描性能实测（1 万真实文件 / 10 万合成条目）
+python scripts/bench_scan.py --mode real --count 10000
+python scripts/bench_scan.py --mode synthetic --count 100000
+
+# 5. 打包占位产物
 python scripts/make_dist.py
 ```
 

@@ -33,6 +33,9 @@ LAYERS = (
     "reporting",
 )
 
+#: Layers that have a real implementation today. The rest are intentional placeholders.
+IMPLEMENTED_LAYERS = frozenset({"scanning", "rules", "safety"})
+
 # Anything that would drag Qt, a GUI toolkit, or a network stack into Core.
 FORBIDDEN_IMPORT_ROOTS = frozenset(
     {
@@ -80,7 +83,10 @@ def test_core_package_imports(repo_root: Path) -> None:
 def test_layer_packages_are_importable(layer: str) -> None:
     module = importlib.import_module(f"tidymate_core.{layer}")
     assert module.__doc__, f"layer {layer} must document its responsibility"
-    assert module.__all__ == []
+    if layer in IMPLEMENTED_LAYERS:
+        assert module.__all__, f"implemented layer {layer} must expose a public API"
+    else:
+        assert module.__all__ == [], f"unimplemented layer {layer} must stay empty"
 
 
 def test_core_does_not_import_ui_or_network_code(repo_root: Path) -> None:
@@ -106,7 +112,7 @@ def test_cli_version_output() -> None:
     assert tidymate_core.__version__ in result.stdout
 
 
-def test_cli_exposes_status_only_in_stage_0() -> None:
+def test_cli_exposes_status_only_in_read_only_stages() -> None:
     # typer leaves CommandInfo.name as None when it derives the name from the function.
     names: set[str] = set()
     for command in app.registered_commands:
@@ -114,11 +120,13 @@ def test_cli_exposes_status_only_in_stage_0() -> None:
             names.add(command.name)
         elif command.callback is not None:
             names.add(str(command.callback.__name__))
-    assert names == {"status"}, f"no write command may exist in stage 0, found {names}"
+    assert names == {"status"}, f"no write command may exist in a read-only stage, found {names}"
 
 
 def test_cli_status_is_honest() -> None:
     result = CliRunner().invoke(app, ["status"])
     assert result.exit_code == 0
-    assert "stage           : 0" in result.stdout
-    assert "not implemented yet" in result.stdout
+    assert "stage           : 2" in result.stdout
+    assert "read-only" in result.stdout
+    assert "write commands  : none" in result.stdout
+    assert "journal         : not implemented yet" in result.stdout
