@@ -79,3 +79,6 @@ build/specs/
 # MSI verification artifacts
 build/msi-extract/
 build/msi-install.log
+
+# VM verification report
+build/vm-verify.json

@@ -123,6 +123,39 @@ user data: C:\Users\ASUS\AppData\Local\TidyMate\tidymate.db (28,672 bytes, 卸�
 CI 侧：`dotnet tool install --global wix` 会装 v7，工作流已加入
 `wix eula accept wix7`，否则 CI 也会被 WIX7015 拦住。
 
+### 3.4 干净 Windows 11 VM 验收（2026-10-20）
+
+VM：Windows 11 x64（VMware Workstation），账号 `admin`，**没有 Python、没有 Qt**。
+`scripts/verify-install.ps1` 在 VM 内以管理员身份自动完成：安装 → 检查 → 启动 GUI →
+卸载，并输出 JSON。
+
+```json
+{
+  "is_admin": true,
+  "installed": true,
+  "cli_version": "tidymate 0.1.0",
+  "gui_started": true,
+  "user_data_before": false,
+  "uninstall": {
+    "program_left": false,
+    "menu_left": false,
+    "arp_left": 0,
+    "{3F99551E-73EE-5C4E-921C-03E00FE6B48D}": 0,
+    "user_data_after": true
+  },
+  "errors": []
+}
+```
+
+- 安装后 `C:\Program Files\TidyMate` 共 192 个文件，两个可执行文件大小与主机一致
+  （`TidyMate.exe` 2,205,606；`cli\tidymate.exe` 6,103,117）；
+- 两个快捷方式目标都正确且指向存在的文件；
+- ARP 只有一条 0.1.0，ProductCode 是稳定的 `{3F99551E-...}`；
+- **GUI 在没有 Python 的机器上启动并保持运行**（脚本启动 6 秒后仍未退出，随后关闭）；
+- 卸载后程序目录、开始菜单、ARP 全部清零，`%LOCALAPPDATA%\TidyMate` 保留。
+
+结论：干净 Windows 11 上“安装 → 双击可用 → 卸载不丢用户数据”已成立。
+
 ## 4. CI 变更
 
 `package` job 现在：
@@ -155,8 +188,7 @@ $ python -m pytest -q
 
 ## 6. 未验证项
 
-1. **干净 VM 验证**：本机（已有 Python/Qt 环境）的安装/卸载已通过；仍未在全新 Windows 11 VM 上
-   验证“无运行时也能启动”。
+1. **干净 VM**：已完成（见 3.4），无 Python/Qt 的 Windows 11 上安装、启动、卸载均通过。
 2. **干净 Windows 11 VM**：便携版与 MSI 都未在无 Python 环境的机器上启动过。
 3. **GUI 版首次启动**：windowed exe 无法在当前无显示环境冒烟。
 4. **签名**：未签名，SmartScreen 会告警（是否购买证书仍未决定）。
