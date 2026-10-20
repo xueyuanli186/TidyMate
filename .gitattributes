@@ -18,6 +18,8 @@
 *.exe    binary
 *.dll    binary
 *.png    binary
+
+# Documented GUI screenshots (docs/images/) are tracked on purpose.
 *.jpg    binary
 *.ico    binary
 *.db     binary

@@ -218,21 +218,34 @@ identical=True
 | 长目标路径 `\\?\` | `::test_long_target_requires_extended_prefix`、`::test_path_beyond_hard_limit_is_rejected` |
 | GUI 执行按钮禁用 | `test_gui.py::test_execute_button_is_disabled_with_stage_label`（PySide6 未装时 skip） |
 
-## 5. 与需求的两处刻意偏差（需要你确认）
+## 5. 与需求的两处刻意偏差（2026-10-20 已由产品负责人确认保留）
 
 1. **首尾 trim 只去掉"前导空格 + 尾部空格和点"**，保留前导点。
    原因：Windows 允许 `.gitignore`，禁止的是**结尾**的点/空格。按字面"首尾都去点"
    会把 `{ext}` 渲染出的 `.jpg` 变成 `jpg`，直接毁掉扩展名。测试
    `test_leading_dot_is_preserved` 锁住了这个决定。
+   **决定（2026-10-20）**：保持现状，并在 `docs/TEMPLATES.md` 里把这条件写成用户文档。
 
 2. **模板字面量里的非法字符仍然是"规则文件错误"**，只有**渲染值**里的非法字符才被
    净化。原因：模板里写 `a:b` 是作者写错了，应在加载时拒绝；而文件名里的 `:` 可能来自
    其他文件系统，属于运行时数据，应修复而不是让整批计划失败。
+   **决定（2026-10-20）**：保持现状。
 
 ## 6. 未验证项与已知限制
 
-1. **GUI 未在本机验证**：`PySide6` 后台安装未完成。GUI 代码已通过 ruff/mypy，
-   `test_gui.py` 会在装有 PySide6 的机器上以 offscreen 方式运行。
+1. **GUI 已验证（2026-10-20 补记）**：`PySide6 6.12.0` 安装成功，
+   `test_gui.py` 的 5 个用例全部通过（offscreen 平台）。另外用
+   `scripts/render_gui_shot.py` 在原生 Windows 平台上真实渲染了一次界面并截图：
+   `docs/images/gui-dry-run.png` —— 9 行结果、两条 `intra_batch` 行粉色高亮、
+   执行按钮灰态且文案为"执行（阶段 5 开放）"、状态栏统计与 `plan_hash` 一致。
+   **仍未验证**：真人用鼠标点一遍的交互路径（拖列宽、文件选择对话框、导出对话框），
+   截图只证明渲染与绑定，不证明交互手感。
+
+   > 顺带记录一个坑：GUI 测试与 coverage 同时启用时，进程会在退出阶段以
+   > `0xC0000409`（STATUS_STACK_BUFFER_OVERRUN）崩溃——pytest 仍报 "486 passed"，
+   > 只有退出码暴露问题。根因是 Qt widget 与 coverage 的退出清理顺序冲突。
+   > 修复：在 `window` fixture 的 teardown 里显式 `close()` + `deleteLater()` +
+   > `processEvents()`，让 Qt 在解释器退出前销毁窗口。
 2. **CI 已跑通（2026-10-20 补记）**：run #39375183042 五个 job 全绿，
    `check_forbidden_apis.py` / `check_readonly.py` / 沙箱步骤在 `windows-latest` 上
    真实执行通过，artifact `TidyMate-0.1.0-windows` 可下载。

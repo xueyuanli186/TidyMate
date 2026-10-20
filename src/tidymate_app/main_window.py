@@ -41,7 +41,7 @@ _CONFLICT_BACKGROUND = QColor("#ffe0e0")
 _REJECT_BACKGROUND = QColor("#fff2d9")
 
 
-class MainWindow(QMainWindow):  # type: ignore[misc]
+class MainWindow(QMainWindow):
     """The whole GUI for this stage, in one widget tree."""
 
     def __init__(self) -> None:

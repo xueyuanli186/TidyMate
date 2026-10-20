@@ -66,6 +66,11 @@ python scripts/make_dist.py
 分层的命名对映：原 .NET 方案里的 `src/TidyMate.Core/Scanning` → 这里的
 `src/tidymate_core/scanning`（Python 包必须小写、可导入；层级语义完全一致）。
 
+## 模板与规则
+
+路径模板支持哪些变量、净化规则、哪些变量被明确禁止，见
+[`docs/TEMPLATES.md`](docs/TEMPLATES.md)。
+
 ## 安全承诺（摘要）
 
 完整威胁模型与报告渠道见 [`docs/SECURITY.md`](docs/SECURITY.md)。

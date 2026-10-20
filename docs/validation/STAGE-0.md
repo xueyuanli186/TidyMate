@@ -92,9 +92,9 @@ longpath\segment-LLL...01\...\segment-LLL...06\deep-payload.txt | file | 16 | lo
    - **仍未验证**的只剩 `release.yml`：它由 `v*` tag 触发，本项目还没有正式发布。
 2. **MSI（WiX v4）不存在**：`release.yml` 的 MSI 步骤是显式占位（打印警告并成功退出），
    Release 说明里写明 "Not included yet"。`build/build_msi.py` 存在但以退出码 69 拒绝执行。
-3. **PySide6 未安装**：阶段 0 时 GUI 只有导入探测。阶段 4 已写出 PySide6 窗口代码
-   （`tidymate_app/main_window.py`），但本机仍装不上 PySide6，**窗口从未被创建过**，
-   详见 `docs/validation/STAGE-3-4.md` 第 6 节。
+3. **PySide6 已验证（2026-10-20 补记）**：阶段 0 时只有导入探测；阶段 4 写出窗口后，
+   `PySide6 6.12.0` 安装成功，5 个 GUI 用例通过，并有原生渲染截图
+   `docs/images/gui-dry-run.png`。详见 `docs/validation/STAGE-3-4.md` 第 6 节。
 4. **符号链接降级为硬链接**：本机未开启开发者模式且非管理员，`New-Item -ItemType SymbolicLink`
    失败，脚本按设计降级为硬链接并把原因写入 manifest 的 NOTES 段。**符号链接分支本身未被真实执行过。**
 5. **PowerShell 7 已验证（2026-10-20 补记）**：本机只有 5.1，但 CI 的 `safety` job

@@ -10,7 +10,7 @@
 | 2 | 规则与模板 | M2.1 规则模型（YAML、priority、firstMatchOnly） · M2.2 size/time 表达式 · M2.3 安全正则（200ms 超时 + 灾难模式拒绝） · M2.4 模板白名单静态校验 · M2.5 严格加载（行号、整体拒绝） · M2.6 匹配器与引擎 | ✅ 完成（2026-10-20） |
 | 3 | 规划与 Dry-run 报告 | M3.1 白名单模板渲染（16 变量、净化、截断+哈希、空值兜底） · M3.2 目标路径校验（黑名单/保留名/长度） · M3.3 计划模型与祖先检测 | ✅ 完成（2026-10-20） |
 | 4 | 预览与报告 | M4.1 冲突检测（磁盘/批内/大小写不敏感） · M4.2 三形态报告（表格/plan.json/report.md） · M4.3 plan_hash 幂等 · M4.4 PySide6 最小 GUI（执行按钮禁用） | ✅ 完成（2026-10-20） |
-| 5 | 日志与执行器 | SQLite（WAL）批次/操作表、write-ahead、move/rename/copy/trash（send2trash）、逐项状态机 | 未开始 |
+| 5 | 日志与执行器 | M5.1 SQLite（WAL）批次/操作表 · M5.2 write-ahead（先写 intent 再动文件） · M5.3 move/rename/copy/trash（send2trash）执行器 · M5.4 逐项状态机 · M5.5 `--apply` + 二次确认 · M5.6 状态统计从 SQL 聚合。**硬性验收**：全仓 grep 永久删除 API，命中必须为零，或仅出现在“回滚 copy 副本且走回收站”的路径上，并附命令与原始输出 | 未开始 |
 | 6 | 撤销 | 按 batch_id 回滚、copy 副本回滚走回收站、回收站还原（能力边界见验证报告） | 未开始 |
 | 7 | CLI 完整化 | `scan/plan/apply/undo/status/verify`、`--apply` 二次确认语义、人类可读报告 | 未开始 |
 | 8 | GUI | PySide6 界面、预览树、二次确认弹窗、首次运行提示 | 未开始 |
@@ -24,8 +24,8 @@
   artifact `TidyMate-0.1.0-windows` 可下载。详见 `docs/validation/STAGE-0.md` 第 5 节。
 - `release.yml` 仍未验证（需要打 `v*` tag）。
 - MSI（WiX v4）只有工作流占位，没有 `.wxs`。
-- PySide6 装不上（本机 pip 安装卡死），GUI 代码已写但**从未运行验证**；
-  `test_gui.py` 在无 Qt 环境下 skip。
+- GUI 已用 `PySide6 6.12.0` 在 offscreen 下跑过 5 个用例并渲染截图，但**真人交互**
+  （文件对话框、拖列宽、导出流程）尚未验证。
 - `trash` 的撤销能力边界尚未验证（依赖 Shell 接口）。
 - 符号链接（真正的 symlink）未实测，用 junction 覆盖了 reparse point 路径。
 - ADS / OneDrive 占位文件只识别属性位，没有"跳过并分类"的策略（属执行前安全校验）。

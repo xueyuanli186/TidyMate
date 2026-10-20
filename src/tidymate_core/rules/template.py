@@ -14,6 +14,9 @@ Sanitising rules (all mirrored in tests):
 * a path segment longer than :data:`MAX_SEGMENT_LENGTH` keeps a stable 8-char hash suffix
   and the original extension, and records a note so the report can say it was truncated;
 * an empty segment becomes ``untitled_<seq>`` and records a note.
+
+User-facing reference, including why a leading dot is preserved:
+``docs/TEMPLATES.md``.
 """
 
 from __future__ import annotations

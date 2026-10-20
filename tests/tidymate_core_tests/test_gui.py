@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import os
 import textwrap
+from collections.abc import Iterator
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -29,15 +31,21 @@ rules:
 
 @pytest.fixture(scope="module")
 def qapp() -> QApplication:
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
+    existing = QApplication.instance()
+    if existing is None:
+        return QApplication([])
+    return cast("QApplication", existing)
 
 
 @pytest.fixture
-def window(qapp: QApplication) -> MainWindow:  # noqa: ARG001 - ensures QApplication exists
-    return MainWindow()
+def window(qapp: QApplication) -> Iterator[MainWindow]:
+    # Explicit teardown matters: letting Qt destroy widgets while coverage is flushing
+    # its data at interpreter exit crashes the process with 0xC0000409 on Windows.
+    main_window = MainWindow()
+    yield main_window
+    main_window.close()
+    main_window.deleteLater()
+    qapp.processEvents()
 
 
 def test_execute_button_is_disabled_with_stage_label(window: MainWindow) -> None:
@@ -89,9 +97,12 @@ def test_conflict_rows_are_highlighted(window: MainWindow, tmp_path: Path) -> No
     assert outcome.plan is not None
     window._load_plan(outcome.plan)
 
+    def background_name(row: int) -> str:
+        item = window.table.item(row, 4)
+        assert item is not None
+        return item.background().color().name()
+
     highlighted = [
-        row
-        for row in range(window.table.rowCount())
-        if window.table.item(row, 4).background().color().name() != "#000000"
+        row for row in range(window.table.rowCount()) if background_name(row) != "#000000"
     ]
     assert highlighted, "conflict rows must be visually marked"
