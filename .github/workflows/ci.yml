@@ -92,7 +92,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+          # No pip cache on purpose: this job installs nothing, and setup-python's
+          # post step fails the whole job when the cache directory never appeared.
+          # That is exactly what broke CI run #1 and skipped the artifact job.
 
       - name: Forbidden delete API scan
         run: python scripts/check_forbidden_apis.py

@@ -14,7 +14,8 @@ dynamic = ["version"]
 description = "Windows local file organiser: previewable, undoable, offline by default."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = { text = "Apache-2.0" }
+license-files = ["LICENSE"]
 authors = [{ name = "TidyMate Project" }]
 keywords = ["windows", "file-organiser", "dry-run", "recycle-bin"]
 classifiers = [
