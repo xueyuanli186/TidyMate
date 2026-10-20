@@ -116,20 +116,22 @@ OneDrive 同步目录。因此测试通过 `PlanRequest.entries` 注入一个属
 | `test_rename_falls_back_to_a_timestamp_after_999_candidates` | 999 个候选全冲突 → `name_yyyyMMdd-HHmmss_ffffff.ext`（`a_20261020-120000_000000.jpg`） |
 | `test_rename_marks_failed_when_the_timestamp_also_collides` | 时间戳也冲突 → `status=failed`、`error_kind=rename_exhausted`、`stats.failed=1` |
 | `test_report_states_the_bytes_accounting_rule` | 报告统计块含指定口径文案 |
+| `test_timestamp_fallback_keeps_the_plan_hash_stable` | 时间戳退化下同一输入两次 dry-run 的 `plan_hash` 与目标名一致 |
 
 真实运行日志（`pytest -v`，原样）：
 
 ```text
-collecting ... collected 6 items
+collecting ... collected 7 items
 
-tests/tidymate_core_tests/test_special_files.py::test_real_zone_identifier_stream_is_detected_and_skipped PASSED [ 16%]
-tests/tidymate_core_tests/test_special_files.py::test_onedrive_placeholder_is_skipped_with_guidance PASSED [ 33%]
-tests/tidymate_core_tests/test_special_files.py::test_ads_wins_over_onedrive_when_both_apply PASSED [ 50%]
-tests/tidymate_core_tests/test_special_files.py::test_rename_falls_back_to_a_timestamp_after_999_candidates PASSED [ 66%]
-tests/tidymate_core_tests/test_special_files.py::test_rename_marks_failed_when_the_timestamp_also_collides PASSED [ 83%]
-tests/tidymate_core_tests/test_special_files.py::test_report_states_the_bytes_accounting_rule PASSED [100%]
+tests/tidymate_core_tests/test_special_files.py::test_real_zone_identifier_stream_is_detected_and_skipped PASSED [ 14%]
+tests/tidymate_core_tests/test_special_files.py::test_onedrive_placeholder_is_skipped_with_guidance PASSED [ 28%]
+tests/tidymate_core_tests/test_special_files.py::test_ads_wins_over_onedrive_when_both_apply PASSED [ 42%]
+tests/tidymate_core_tests/test_special_files.py::test_rename_falls_back_to_a_timestamp_after_999_candidates PASSED [ 57%]
+tests/tidymate_core_tests/test_special_files.py::test_rename_marks_failed_when_the_timestamp_also_collides PASSED [ 71%]
+tests/tidymate_core_tests/test_special_files.py::test_report_states_the_bytes_accounting_rule PASSED [ 85%]
+tests/tidymate_core_tests/test_special_files.py::test_timestamp_fallback_keeps_the_plan_hash_stable PASSED [100%]
 
-============================== 6 passed in 0.37s ==============================
+============================== 7 passed in 0.40s ==============================
 ```
 
 ## 4. P1：rename 退化算法
@@ -157,26 +159,27 @@ tests/tidymate_core_tests/test_special_files.py::test_report_states_the_bytes_ac
 
 ## 6. P1 的 GitHub Issue
 
-当前环境没有 `gh` CLI，也没有可用的 GitHub token（`git credential fill` 提示
-无凭据），因此**无法**直接创建 Issue。修复本身已提交为 `c9b00c4`，Issue 草稿：
+当前环境没有 `gh` CLI，也没有可用的 GitHub token（`git credential fill` 提示无凭据），
+因此**无法**直接创建 Issue。已按产品负责人的选择改为"网页手工创建"：
 
-- 标题：`rename fallback: add timestamp stage after name (2..999)`
-- 正文要点：现状、退化规则、`failed` 语义、验收用例名、修复提交 `c9b00c4`。
+- 标题与正文：`docs/issues/rename-fallback.md`（可直接整段粘贴）；
+- 修复提交：`c9b00c4`；
+- **编号：待回填**。创建后把编号写回本节，并把该文档的"状态"改为已创建。
 
-提供 token 后可立即创建并回填编号；在此之前该条不能声称"已登记"。
+在此之前，这一条不能声称"已登记"。
 
 ## 7. 回归（真实输出）
 
 ```text
 $ python -m pytest -q
 Required test coverage of 90.0% reached. Total coverage: 93.01%
-492 passed in 3.31s
+493 passed in 3.43s
 
 $ python -m ruff check .
 All checks passed!
 
 $ python -m ruff format --check .
-94 files already formatted
+96 files already formatted
 
 $ python -m mypy
 Success: no issues found in 81 source files

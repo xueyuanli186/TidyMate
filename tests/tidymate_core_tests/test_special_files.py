@@ -226,3 +226,27 @@ def test_report_states_the_bytes_accounting_rule(tmp_path: Path) -> None:
 
     assert "字节变化口径" in report
     assert "move/rename 未计入" in report
+
+
+def test_timestamp_fallback_keeps_the_plan_hash_stable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "a.jpg").write_bytes(b"x")
+    out = tmp_path / "out" / "flat"
+    out.mkdir(parents=True)
+    (out / "a.jpg").write_bytes(b"y")
+
+    def always_conflicting(path: str) -> bool:
+        name = Path(path).name
+        return name == "a.jpg" or bool(re.fullmatch(r"a \(\d+\)\.jpg", name))
+
+    monkeypatch.setattr(planner, "conflicts_on_disk", always_conflicting)
+
+    first = build_plan(make_request(root, rules=rename_ruleset()))
+    second = build_plan(make_request(root, rules=rename_ruleset()))
+
+    assert first.plan_hash == second.plan_hash
+    assert first.changes[0].dst == second.changes[0].dst
