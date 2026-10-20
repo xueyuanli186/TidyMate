@@ -11,7 +11,7 @@
 | 3 | 规划与 Dry-run 报告 | M3.1 白名单模板渲染（16 变量、净化、截断+哈希、空值兜底） · M3.2 目标路径校验（黑名单/保留名/长度） · M3.3 计划模型与祖先检测 | ✅ 完成（2026-10-20） |
 | 4 | 预览与报告 | M4.1 冲突检测（磁盘/批内/大小写不敏感） · M4.2 三形态报告（表格/plan.json/report.md） · M4.3 plan_hash 幂等 · M4.4 PySide6 最小 GUI（执行按钮禁用） | ✅ 完成（2026-10-20） |
 | 5 | 日志与执行器 | M5.1 SQLite（WAL）批次/操作表 · M5.2 write-ahead（先写 intent 再动文件） · M5.3 move/rename/copy/trash（send2trash）执行器 · M5.4 逐项状态机 · M5.5 `--apply` + 二次确认 · M5.6 状态统计从 SQL 聚合。**硬性验收**：全仓 grep 永久删除 API 命中为零（`OK ... 56 scanned files`）。另含 M5 冲突处理：skip/rename/ask、`(1..999)` + 时间戳退化、ReservedTargetIndex。见 `docs/validation/STAGE-5-6.md` | ✅ 完成（2026-10-20） |
-| 6 | 撤销 | 按 batch_id 回滚、copy 副本回滚走回收站、回收站还原（能力边界见验证报告） | 未开始（日志已具备回滚所需的 src/dst/state） |
+| 6 | 撤销 | 按 batch_id 回滚、copy 副本回滚走回收站、回收站还原（能力边界见验证报告）。**P0 验收：200 条变更全部复原，用文件系统快照对比**。计划 2026-10-21 交付；未过不进入阶段 7 | 已排期（2026-10-20 承诺） |
 | 7 | CLI 完整化 | `scan/plan/apply/undo/status/verify`、`--apply` 二次确认语义、人类可读报告 | 未开始 |
 | 8 | GUI | PySide6 界面、预览树、二次确认弹窗、首次运行提示 | 未开始 |
 | 9 | 打包与发布 | PyInstaller onedir、WiX v4 MSI、便携 zip、签名（待定）、发布流程 | 未开始 |
@@ -37,3 +37,4 @@
 - GUI 需要 `pip install -e ".[gui]"`；未安装时 GUI 测试 skip。
 - `conflict: rename` 已实现 999 次候选 + 时间戳退化（见 STAGE-3-4-P0 报告）；批量重命名
   规划仍未做。
+- **P1（Issue #3）**：安装器目录检测只看目录顶层，深层嵌套的程序目录可能漏判。
