@@ -31,6 +31,10 @@ ALLOWED_MODULES: frozenset[str] = frozenset(
         "tidymate_core/execution/executor.py",
         # stage 5-6: SQLite write-ahead journal (creates its own directory/database)
         "tidymate_core/journal/db.py",
+        # stage 7-9: errors-<batch>.md / .json reports
+        "tidymate_core/execution/reports.py",
+        # stage 7-9: undo engine (moves files back, recycles copies)
+        "tidymate_core/execution/undo.py",
     },
 )
 

@@ -62,6 +62,8 @@ class PlannedChange:
     #: Machine-readable sub-reason for skips the executor must not silently perform:
     #: ``"ads"``, ``"onedrive_placeholder"`` or ``"rename_exhausted"``.
     error_kind: str | None = None
+    #: Source mtime at preview time; undo compares it to detect edits after the fact.
+    mtime_utc: datetime | None = None
 
     @property
     def is_executable(self) -> bool:

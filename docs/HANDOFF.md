@@ -14,10 +14,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `main` @ `48f8262`（阶段 5-6：冲突处理 + 执行器） |
-| 测试 | `529 passed`（4.5s），覆盖率 `90.59%`（门槛 90%） |
-| 静态检查 | `ruff check` / `ruff format --check`（104 文件）/ `mypy`（88 文件）全过 |
-| 安全闸门 | `check_forbidden_apis.py`：`OK ... 56 scanned files`；`check_readonly.py`：`OK ... 39 product files` |
+| 分支 / 提交 | `main` @ 阶段 7-9 提交（批次日志 + 撤销 + 错误报告） |
+| 测试 | `569 passed`（55s），覆盖率 `90.12%`（门槛 90%） |
+| 静态检查 | `ruff check` / `ruff format --check`（113 文件）/ `mypy`（96 文件）全过 |
+| 安全闸门 | `check_forbidden_apis.py`：`OK ... 60 scanned files`；`check_readonly.py`：`OK ... 43 product files` |
 | 版本 | `0.1.0`，唯一来源 `src/tidymate_core/_version.py` |
 
 复现命令（在仓库根目录）：
@@ -47,23 +47,14 @@ python scripts/check_readonly.py
    `onedrive_placeholder`。阶段 5 的执行器必须按 `error_kind` 拒绝执行这两类条目，
    且要在移动前复查（见第 5 节第一条）。
 
-## 4. 下一步：阶段 6（撤销）
+## 4. 下一步：阶段 8（GUI）与阶段 9（打包）
 
-阶段 5-6 已把回滚所需的原料写进日志：每条操作的 `src` / `dst` / `final_dst` /
-`state` / `op` 都在 SQLite 里。阶段 6 要做的是：
+撤销引擎已完成，200 条往返验证通过。剩余：
 
-1. `undo <batch_id>`：倒序回滚 `ok` 的条目；move → 移回 `src`，copy → 把副本送回收站，
-   rename → 改回原名，trash → 从回收站还原（能力边界先验证再承诺）。
-2. 回滚本身也要写日志（`operations` 加 `undo_state` 或用独立的 `undo_operations` 表），
-   失败必须如实记录，不能报"已回滚"。
-3. 回滚前重新校验：目标是否存在、源位置是否已被占用；冲突时整条标记 failed。
-4. `apply` 的记录必须能定位到 DB 与 batch，撤销命令要能在同一 DB 上工作。
-
-**交付承诺（2026-10-20 对产品负责人）**：撤销引擎在**阶段 6**完成，预计 **2026-10-21**；
-验收是「200 条变更全部复原」的快照对比，未过不进入阶段 7。
-
-**仍未做**：GUI 二次确认与 ask 弹窗（阶段 8）、CLI 的 `scan/verify`（阶段 7）。
-**P1 Issue #3**：安装器目录检测只看顶层，不阻塞。
+1. 阶段 8：PySide6 界面接上 `apply` / `undo` / `verify`，执行与撤销都要二次确认弹窗；
+   现有 GUI 仍禁用执行按钮。
+2. 阶段 9：PyInstaller onedir、WiX MSI、发布流程（`release.yml` 仍未验证）。
+3. 阶段 7 还差 `scan` 子命令（CLI 完整化表里已标注部分完成）。
 
 ## 5. 已知欠缺与坑（别重复踩）
 

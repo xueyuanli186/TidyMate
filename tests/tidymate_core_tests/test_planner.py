@@ -146,7 +146,7 @@ def test_rename_policy_finds_a_free_name(tmp_path: Path) -> None:
     change = plan.changes[0]
     assert change.status is ChangeStatus.EXECUTE
     assert change.dst is not None
-    assert change.dst.endswith("a (2).jpg")
+    assert change.dst.endswith("a (1).jpg")
     assert any("renamed" in note for note in change.notes)
 
 

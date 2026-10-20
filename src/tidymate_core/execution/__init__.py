@@ -1,6 +1,7 @@
-"""Execution: move / rename / copy / trash with a per-item state machine.
+"""Execution: move / rename / copy / trash, and the matching undo engine.
 
-Stage 5-6: this package is the only place in the product allowed to write. It still never
+Stage 5-6 introduced the executor; stage 7-9 add the undo engine, error reports and
+``verify``. This package is the only place in the product allowed to write. It still never
 deletes permanently - ``trash`` goes through ``send2trash``, enforced by the static scan in
 ``scripts/check_forbidden_apis.py``.
 """
@@ -15,6 +16,9 @@ from tidymate_core.execution.models import (
     OperationOutcome,
     OutcomeState,
 )
+from tidymate_core.execution.reports import ReportPaths, render_json, render_markdown, write_reports
+from tidymate_core.execution.undo import Undoer, UndoOutcome, UndoReport
+from tidymate_core.execution.verify import VerifyProblem, verify_batch
 
 __all__ = [
     "ExecutionOptions",
@@ -24,5 +28,14 @@ __all__ = [
     "GateResult",
     "OperationOutcome",
     "OutcomeState",
+    "ReportPaths",
+    "UndoOutcome",
+    "UndoReport",
+    "Undoer",
+    "VerifyProblem",
     "evaluate",
+    "render_json",
+    "render_markdown",
+    "verify_batch",
+    "write_reports",
 ]

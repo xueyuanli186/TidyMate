@@ -56,6 +56,8 @@ def _sha256(path: str) -> str:
 
 
 def _error_kind(exc: OSError) -> str:
+    if isinstance(exc, FileExistsError):
+        return "conflict"
     winerror = getattr(exc, "winerror", None)
     if winerror in _IN_USE_WINERRORS:
         return "in_use"

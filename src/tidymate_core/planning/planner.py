@@ -137,20 +137,21 @@ def _make_change(
         notes=notes,
         size=entry.size,
         error_kind=error_kind,
+        mtime_utc=entry.mtime_utc,
     )
 
 
 def _next_available(target: str, *, now: datetime) -> str | None:
     """Find a free destination name, degrading in two documented steps.
 
-    1. ``name (2).ext`` ... ``name (999).ext``;
+    1. ``name (1).ext`` ... ``name (999).ext``;
     2. ``name_yyyyMMdd-HHmmss_ffffff.ext`` (the timestamp comes from the plan's
        ``created_at``, so two dry-runs over the same tree still hash identically);
     3. give up and return ``None`` - the caller marks the entry ``failed``.
     """
     target_path = PureWindowsPath(target)
     stem, extension = str(target_path.with_suffix("")), target_path.suffix
-    for index in range(2, 1000):
+    for index in range(1, 1000):
         candidate = f"{stem} ({index}){extension}"
         if not conflicts_on_disk(candidate):
             return candidate
@@ -357,6 +358,7 @@ def change_to_dict(change: PlannedChange) -> dict[str, object]:
         "conflict": change.conflict.value,
         "reason": change.reason.value if change.reason is not None else None,
         "error_kind": change.error_kind,
+        "mtime_utc": change.mtime_utc.isoformat() if change.mtime_utc else None,
         "flags": list(change.flags),
         "notes": list(change.notes),
         "size": change.size,
@@ -515,6 +517,9 @@ def change_from_dict(data: dict[str, object]) -> PlannedChange:
         notes=_payload_str_tuple(data.get("notes")),
         size=_payload_int(data.get("size", 0), field="size"),
         error_kind=str(raw_kind) if raw_kind is not None else None,
+        mtime_utc=(
+            datetime.fromisoformat(str(data["mtime_utc"])) if data.get("mtime_utc") else None
+        ),
     )
 
 

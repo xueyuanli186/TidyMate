@@ -126,6 +126,7 @@ def test_plan_to_dict_has_the_required_fields() -> None:
         "conflict",
         "reason",
         "error_kind",
+        "mtime_utc",
         "flags",
         "notes",
         "size",

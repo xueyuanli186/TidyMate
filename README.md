@@ -2,12 +2,11 @@
 
 Windows 本地文件整理器。按规则把散乱文件归入模板目录，**全程可预览、可撤销、默认不联网**。
 
-> **当前状态：阶段 5-6（冲突处理 + 执行器）。可以真实整理文件了，但默认仍是 dry-run。**
-> `tidymate plan` 只预览；`tidymate apply <batch_id>` 才会移动，且必须通过五道门禁
-> （同 plan_hash 的预览、显式确认、黑名单零命中、祖先零命中、日志可写与空间足够）。
-> 删除只进回收站；每条操作先写 SQLite intent 再动文件。撤销（阶段 6）与 GUI 二次确认
-> （阶段 8）尚未实现，执行按钮在 GUI 里仍是禁用的。
-> 细节见 [`docs/validation/STAGE-5-6.md`](docs/validation/STAGE-5-6.md)。
+> **当前状态：阶段 7-9（批次日志 + 一键撤销 + 错误报告）。可以整理，也可以撤回。**
+> `plan` 预览、`apply` 执行、`undo` 撤销、`verify` 核对；每一步都写 SQLite 日志，
+> 删除只进回收站，撤销默认先 dry-run。200 条混合变更的 apply→undo 往返已验证与
+> apply 前逐字节一致（见 [`docs/validation/STAGE-7-9.md`](docs/validation/STAGE-7-9.md)）。
+> GUI（阶段 8）与打包（阶段 9）尚未完成，GUI 的执行按钮仍是禁用的。
 >
 > **换会话 / 上下文用尽时**：从 [`docs/HANDOFF.md`](docs/HANDOFF.md) 继续，那里有当前基线、
 > 已定决策和下一步。

@@ -141,6 +141,24 @@ def check_blacklisted(path: str) -> str | None:
     except ValueError:
         return None
 
+    # Resolve junctions / symlinks before comparing: a link such as
+    # C:/Users/All Users is really C:/ProgramData, and a check that only sees the link
+    # name would wave it through. realpath() resolves the longest existing prefix, so a
+    # not-yet-created target still gets its parent chain resolved.
+    try:
+        resolved = paths.normalize(os.path.realpath(candidate))
+    except (OSError, ValueError):
+        resolved = candidate
+    if resolved != candidate:
+        hit = _check_resolved(resolved)
+        if hit is not None:
+            return hit
+
+    return _check_resolved(candidate)
+
+
+def _check_resolved(candidate: str) -> str | None:
+    """Compare one already-normalised path against every protected root."""
     for protected_file in _RUNTIME_PROTECTED_FILES:
         if _same(protected_file, candidate):
             return "TidyMate runtime file"

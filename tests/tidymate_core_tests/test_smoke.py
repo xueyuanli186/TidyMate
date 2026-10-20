@@ -120,7 +120,15 @@ def test_cli_exposes_the_expected_commands() -> None:
             names.add(command.name)
         elif command.callback is not None:
             names.add(str(command.callback.__name__))
-    assert names == {"status", "plan", "apply"}, f"unexpected CLI surface: {names}"
+    assert names == {
+        "status",
+        "plan",
+        "apply",
+        "undo",
+        "verify",
+        "list-batches",
+        "show-batch",
+    }, f"unexpected CLI surface: {names}"
 
 
 def test_apply_is_not_reachable_without_a_batch_id() -> None:
@@ -131,7 +139,7 @@ def test_apply_is_not_reachable_without_a_batch_id() -> None:
 def test_cli_status_is_honest() -> None:
     result = CliRunner().invoke(app, ["status"])
     assert result.exit_code == 0
-    assert "stage           : 5-6" in result.stdout
+    assert "stage           : 7-9" in result.stdout
     assert "write commands  : apply" in result.stdout
     assert "planning        : templates" in result.stdout
     assert "journal         : SQLite" in result.stdout
