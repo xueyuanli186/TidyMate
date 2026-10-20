@@ -8,9 +8,9 @@
 | 0 | 骨架：能 build、能 test、CI 出 artifact | M0.1 工程与分层骨架 · M0.2 严格模式（mypy strict / warnings as errors） · M0.3 版本单一来源 · M0.4 CI/Release 工作流 · M0.5 仓库治理文件 · M0.6 删除 API 静态扫描 · M0.7 演练沙箱脚本 | ✅ 完成（2026-10-20） |
 | 1 | 扫描与安全底座 | M1.1 路径规范化 + `\\?\` · M1.2 流式 walker（os.scandir、错误容忍、取消） · M1.3 特殊文件识别（junction/symlink/只读/系统/隐藏/长路径/UNC） · M1.4 扫描统计与分类报告 | ✅ 完成（2026-10-20） |
 | 2 | 规则与模板 | M2.1 规则模型（YAML、priority、firstMatchOnly） · M2.2 size/time 表达式 · M2.3 安全正则（200ms 超时 + 灾难模式拒绝） · M2.4 模板白名单静态校验 · M2.5 严格加载（行号、整体拒绝） · M2.6 匹配器与引擎 | ✅ 完成（2026-10-20） |
-| 3 | 规划与 Dry-run 报告 | 变更计划、批内冲突检测、祖先目录逐条检测、dry-run 报告与统计 | 未开始 |
-| 4 | 日志与状态机 | SQLite（WAL）批次/操作表、write-ahead、三态校验、状态统计从 SQL 聚合 | 未开始 |
-| 5 | 执行器 | move / rename / copy / trash（send2trash）、逐项状态机、失败即停与报告 | 未开始 |
+| 3 | 规划与 Dry-run 报告 | M3.1 白名单模板渲染（16 变量、净化、截断+哈希、空值兜底） · M3.2 目标路径校验（黑名单/保留名/长度） · M3.3 计划模型与祖先检测 | ✅ 完成（2026-10-20） |
+| 4 | 预览与报告 | M4.1 冲突检测（磁盘/批内/大小写不敏感） · M4.2 三形态报告（表格/plan.json/report.md） · M4.3 plan_hash 幂等 · M4.4 PySide6 最小 GUI（执行按钮禁用） | ✅ 完成（2026-10-20） |
+| 5 | 日志与执行器 | SQLite（WAL）批次/操作表、write-ahead、move/rename/copy/trash（send2trash）、逐项状态机 | 未开始 |
 | 6 | 撤销 | 按 batch_id 回滚、copy 副本回滚走回收站、回收站还原（能力边界见验证报告） | 未开始 |
 | 7 | CLI 完整化 | `scan/plan/apply/undo/status/verify`、`--apply` 二次确认语义、人类可读报告 | 未开始 |
 | 8 | GUI | PySide6 界面、预览树、二次确认弹窗、首次运行提示 | 未开始 |
@@ -27,3 +27,5 @@
 - 符号链接（真正的 symlink）未实测，用 junction 覆盖了 reparse point 路径。
 - ADS / OneDrive 占位文件只识别属性位，没有"跳过并分类"的策略（属执行前安全校验）。
 - `path_glob` 匹配完整绝对路径，`*.txt` 这类相对写法匹配不到任何文件，必须写 `**/`。
+- GUI 需要 `pip install -e ".[gui]"`；未安装时 GUI 测试 skip。
+- `conflict: rename` 只做单条候选名，没有批量重命名规划。

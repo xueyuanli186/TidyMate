@@ -2,10 +2,10 @@
 
 Windows 本地文件整理器。按规则把散乱文件归入模板目录，**全程可预览、可撤销、默认不联网**。
 
-> **当前状态：阶段 2（扫描 + 规则引擎，只读）。还不能整理任何文件。**
-> 现在可以递归扫描目录（流式、长路径、错误容忍）并按 YAML 规则判断"某个文件会被
-> 哪条规则接管"，但**没有任何移动/复制/删除代码**——`python scripts/check_readonly.py`
-> 在 CI 里强制这一点。`tidymate status` 会如实报告当前能力。
+> **当前状态：阶段 4（扫描 + 规则 + Dry-run 预览，只读）。还不能整理任何文件。**
+> 现在可以扫描目录、按 YAML 规则匹配、渲染目标路径、检测冲突，并导出
+> `plan.json` / `report.md`。**没有任何移动/复制/删除代码**——`python scripts/check_readonly.py`
+> 在 CI 里强制这一点（唯一例外是报告导出模块）。执行按钮在 GUI 里是禁用的。
 
 ## 为什么值得存在
 
@@ -35,11 +35,14 @@ python -m mypy
 python scripts/check_forbidden_apis.py
 python scripts/check_readonly.py
 
-# 4. 扫描性能实测（1 万真实文件 / 10 万合成条目）
+# 4. 只读预览（不写盘，除非显式 --export）
+python -m tidymate_cli plan <源目录> -r rules.yaml -o <目标根目录> --export <报告目录>
+
+# 5. 扫描性能实测（1 万真实文件 / 10 万合成条目）
 python scripts/bench_scan.py --mode real --count 10000
 python scripts/bench_scan.py --mode synthetic --count 100000
 
-# 5. 打包占位产物
+# 6. 打包占位产物
 python scripts/make_dist.py
 ```
 

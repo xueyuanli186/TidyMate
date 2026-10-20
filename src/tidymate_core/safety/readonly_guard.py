@@ -1,15 +1,15 @@
-"""Static guard: the read-only stages must not write to disk.
+"""Static guard: product code must not write to disk, with one reviewed exception.
 
-Stages 1-2 promise "read only". A promise enforced by review alone lasts until the first
-convenience commit, so it is enforced by CI here instead.
+Stages 1-2 were fully read-only. Stages 3-4 added a single, narrow write path - exporting
+``plan.json`` and ``report.md`` - because a dry-run that cannot be exported is not
+reviewable. That exception lives in exactly one module and is listed in
+:data:`ALLOWED_MODULES`; everything else stays write-free, and the executor stage will add
+its own reviewed entry when it lands.
 
 The guard parses the AST rather than grepping text, which keeps ``str.replace`` and
 ``dict.update`` out of the results while still catching ``Path.write_text`` and
 ``shutil.move``. It scans product code only (``src/tidymate_core``): test fixtures and the
 sandbox script legitimately create files.
-
-When a later stage genuinely needs a write (``--apply`` in stage 5), the allowed module is
-added to :data:`ALLOWED_MODULES` *in that stage's PR*, where a reviewer can see it.
 """
 
 from __future__ import annotations
@@ -22,9 +22,14 @@ from pathlib import Path
 #: Product code that must stay write-free. Narrow on purpose.
 DEFAULT_ROOTS: tuple[str, ...] = ("src/tidymate_core",)
 
-#: Files allowed to write, with the stage that introduced the exception.
-#: Empty until stage 5 (executor). Never populate without a reviewed PR.
-ALLOWED_MODULES: frozenset[str] = frozenset()
+#: Files allowed to write, keyed by path relative to ``src/``. Every entry is a reviewed
+#: exception; adding one without an explanation in the PR is a rejection.
+ALLOWED_MODULES: frozenset[str] = frozenset(
+    {
+        # stages 3-4: dry-run artifacts only, confined to the plan's output root
+        "tidymate_core/planning/artifacts.py",
+    },
+)
 
 _WRITE_MODE_CHARS = frozenset("wax+")
 

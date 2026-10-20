@@ -34,7 +34,7 @@ LAYERS = (
 )
 
 #: Layers that have a real implementation today. The rest are intentional placeholders.
-IMPLEMENTED_LAYERS = frozenset({"scanning", "rules", "safety"})
+IMPLEMENTED_LAYERS = frozenset({"scanning", "rules", "safety", "planning"})
 
 # Anything that would drag Qt, a GUI toolkit, or a network stack into Core.
 FORBIDDEN_IMPORT_ROOTS = frozenset(
@@ -112,7 +112,7 @@ def test_cli_version_output() -> None:
     assert tidymate_core.__version__ in result.stdout
 
 
-def test_cli_exposes_status_only_in_read_only_stages() -> None:
+def test_cli_exposes_only_read_only_commands() -> None:
     # typer leaves CommandInfo.name as None when it derives the name from the function.
     names: set[str] = set()
     for command in app.registered_commands:
@@ -120,13 +120,14 @@ def test_cli_exposes_status_only_in_read_only_stages() -> None:
             names.add(command.name)
         elif command.callback is not None:
             names.add(str(command.callback.__name__))
-    assert names == {"status"}, f"no write command may exist in a read-only stage, found {names}"
+    assert names == {"status", "plan"}, f"stage 4 may only expose read-only commands, found {names}"
 
 
 def test_cli_status_is_honest() -> None:
     result = CliRunner().invoke(app, ["status"])
     assert result.exit_code == 0
-    assert "stage           : 2" in result.stdout
+    assert "stage           : 4" in result.stdout
     assert "read-only" in result.stdout
     assert "write commands  : none" in result.stdout
+    assert "planning        : templates" in result.stdout
     assert "journal         : not implemented yet" in result.stdout
