@@ -189,8 +189,9 @@ loader 里重设了 bool 隐式解析器（YAML 1.2 语义），并用
 
 ## 6. 未验证项与已知限制
 
-1. **CI 仍未在 GitHub 真实运行**：本机 git 可用并已提交，但**没有远程仓库地址**，
-   无法 push / 打 tag。工作流新增的 `check_readonly.py` 步骤只做了本地等价验证。
+1. **CI 已跑通（2026-10-20 补记）**：run #39375183042 五个 job 全绿，本阶段新增的
+   `scripts/check_readonly.py` 与 `scripts/make-sandbox.ps1` 步骤在 `windows-latest`
+   上真实执行通过，artifact 已产出。详见 `docs/validation/STAGE-0.md` 第 5 节。
 2. **10 万文件没有真实磁盘实测**：见 §3.2，合成数据的口径已写明。
 3. **符号链接（symlink）未实测**：本机未开开发者模式，用 **junction** 覆盖了
    reparse point 路径；`os.symlink` 分支需要开发者在开发者模式下补验。

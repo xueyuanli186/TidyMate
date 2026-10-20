@@ -19,10 +19,13 @@
 
 ## 已知欠缺（继承到后续阶段）
 
-- **CI 未在 GitHub 上真实执行过**：本地有 git 仓库（阶段 1-2 开始），但没有远程地址，
-  无法 push 触发。所有工作流只做了本地等价验证。
+- **CI 已跑通（2026-10-20）**：推送后跑了两轮。run #1 因 `safety` job 的 `cache: pip`
+  在未安装任何包时收尾失败，导致 `package` 被 skip；修复后 run #39375183042 五个 job 全绿，
+  artifact `TidyMate-0.1.0-windows` 可下载。详见 `docs/validation/STAGE-0.md` 第 5 节。
+- `release.yml` 仍未验证（需要打 `v*` tag）。
 - MSI（WiX v4）只有工作流占位，没有 `.wxs`。
-- PySide6 未安装（可选依赖），GUI 只有导入探测。
+- PySide6 装不上（本机 pip 安装卡死），GUI 代码已写但**从未运行验证**；
+  `test_gui.py` 在无 Qt 环境下 skip。
 - `trash` 的撤销能力边界尚未验证（依赖 Shell 接口）。
 - 符号链接（真正的 symlink）未实测，用 junction 覆盖了 reparse point 路径。
 - ADS / OneDrive 占位文件只识别属性位，没有"跳过并分类"的策略（属执行前安全校验）。

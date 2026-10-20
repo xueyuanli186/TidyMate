@@ -233,7 +233,9 @@ identical=True
 
 1. **GUI 未在本机验证**：`PySide6` 后台安装未完成。GUI 代码已通过 ruff/mypy，
    `test_gui.py` 会在装有 PySide6 的机器上以 offscreen 方式运行。
-2. **CI 仍未在 GitHub 真实运行**：没有远程仓库地址。
+2. **CI 已跑通（2026-10-20 补记）**：run #39375183042 五个 job 全绿，
+   `check_forbidden_apis.py` / `check_readonly.py` / 沙箱步骤在 `windows-latest` 上
+   真实执行通过，artifact `TidyMate-0.1.0-windows` 可下载。
 3. **`conflict: rename` 只生成一层候选名**（`name (2).ext`），若该名也冲突会继续
    尝试到 999；不做批量重命名规划。
 4. **`{parent}` 取源文件的直接父目录名**；对 `C:\a\b\c.txt` 是 `b`。

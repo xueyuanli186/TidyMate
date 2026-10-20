@@ -60,7 +60,7 @@ longpath\segment-LLL...01\...\segment-LLL...06\deep-payload.txt | file | 16 | lo
 | 验收项 | 结论 | 证据 |
 | --- | --- | --- |
 | build 与 test 本地通过 | ✅ | 第 2 节 #2–#5、#8 |
-| CI 能下载到 windows artifact | ⚠️ **未验证** | 工作流已写好（`ci.yml` 的 `package` job + `upload-artifact`，名字 `TidyMate-0.1.0-windows`，保留 14 天）；但本机无 git，无法推送触发。等价步骤已在本地逐步执行通过（第 2 节 #8/#9） |
+| CI 能下载到 windows artifact | ✅ **已验证（2026-10-20 补记）** | GitHub Actions run [#39375183042](https://github.com/xueyuanli186/TidyMate/actions/runs/39375183042)（`5a88428`）五个 job 全绿，artifact `TidyMate-0.1.0-windows` 已产出（67,713 字节，sha256 `7ed571b1e30d5fc080b0f183601df85cc749d62dc2a2e1d47c9e6f1250c283cc`，保留 14 天）。run #1 的失败根因与修复见第 5 节 |
 | 仓库治理文件存在且 YAML 有效 | ✅ | `test_repo_governance.py`：6 个 YAML 全部可解析；10 个标签名精确匹配；issue 表单字段完整；PR 模板含人工 review 条款 |
 | 沙箱脚本结构符合预期并打印清单 | ✅ | 第 2 节 #10、2.1 节 |
 
@@ -76,18 +76,32 @@ longpath\segment-LLL...01\...\segment-LLL...06\deep-payload.txt | file | 16 | lo
 | `dotnet restore/build/test` | `pip install -e ".[dev]"` / `python -m build` / `python -m pytest` |
 | `WPF GUI` | PySide6（可选依赖 `.[gui]`，Core 不引用） |
 
-## 5. 未验证项与原因（必须如实记录）
+## 5. 验证边界（已验证与未验证，如实记录）
 
-1. **CI 未在 GitHub 上真实运行过**：本机没有 git，无法 `git init` / `push` / 打 tag。
-   `ci.yml`、`release.yml` 只做了 YAML 语法与结构校验（pytest）和本地等价命令执行。
-   **"能下载到 artifact" 这条验收目前是"未验证"，不是"通过"。**
+1. **CI 已验证（2026-10-20 补记）**：安装 git 后仓库推送到 `https://github.com/xueyuanli186/TidyMate`，工作流真实执行了两轮：
+   - **run #1**（`f91163e`）失败：`safety guard` job 三个实际步骤都通过，但
+     `Post Set up Python 3.12` 失败。根因是 `cache: pip` 配在一个不安装任何包的
+     job 上，`setup-python` 收尾时 pip 缓存目录不存在，保存缓存失败 → job 失败 →
+     `package` 被 skip，**没有 artifact**。GitHub 的注解原文：
+     *"Cache folder path is retrieved for pip but doesn't exist on disk"*。
+   - **修复**（`5a88428`）：移除该 job 的 `cache: pip`；同时把 `pyproject.toml`
+     的 license 对齐为 Apache-2.0（与仓库里的 LICENSE 一致，wheel 元数据已验证为
+     `License: Apache-2.0` + `License-File: LICENSE`）。
+   - **run #2（id `39375183042`）五个 job 全部 success**（lint / test 3.12 / test 3.13 / safety /
+     package），artifact `TidyMate-0.1.0-windows`（67,713 字节）已产出。
+   - **仍未验证**的只剩 `release.yml`：它由 `v*` tag 触发，本项目还没有正式发布。
 2. **MSI（WiX v4）不存在**：`release.yml` 的 MSI 步骤是显式占位（打印警告并成功退出），
    Release 说明里写明 "Not included yet"。`build/build_msi.py` 存在但以退出码 69 拒绝执行。
-3. **PySide6 未安装**：GUI 只有导入探测，未创建窗口。
+3. **PySide6 未安装**：阶段 0 时 GUI 只有导入探测。阶段 4 已写出 PySide6 窗口代码
+   （`tidymate_app/main_window.py`），但本机仍装不上 PySide6，**窗口从未被创建过**，
+   详见 `docs/validation/STAGE-3-4.md` 第 6 节。
 4. **符号链接降级为硬链接**：本机未开启开发者模式且非管理员，`New-Item -ItemType SymbolicLink`
    失败，脚本按设计降级为硬链接并把原因写入 manifest 的 NOTES 段。**符号链接分支本身未被真实执行过。**
-5. **PowerShell 7 未验证**：本机只有 5.1。脚本按 5.1 语法编写并实测通过；CI 用 pwsh 7，
-   两者在 `-Stream`、`New-Item -ItemType Junction`、`::new()` 上行为一致，但**未实测**。
+5. **PowerShell 7 已验证（2026-10-20 补记）**：本机只有 5.1，但 CI 的 `safety` job
+   用 `shell: pwsh`（PowerShell 7）在 `windows-latest` 上完整执行了
+   `scripts/make-sandbox.ps1` 并成功产出了 manifest（run #2 该步骤 success）。
+   结论：脚本在 5.1 与 7 上都能跑；但**这次 CI 只覆盖了“能跑通”，没有逐项断言
+   脚本产物**（例如 junction 是否创建成功），那部分仍靠本地 5.1 的测试覆盖。
 
 ## 6. 本阶段刻意未做的事
 
