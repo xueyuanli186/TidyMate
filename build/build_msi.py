@@ -17,6 +17,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,18 @@ EX_UNAVAILABLE = 69
 EX_SOFTWARE = 70
 
 _VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+_NAMESPACE = uuid.UUID("6f2a9c1e-4b7d-4e83-9c0a-2f5b8d7e1a34")
+
+
+def product_code(version: str) -> str:
+    """Return a stable ProductCode for *version*.
+
+    WiX generates a random ProductCode per build unless one is supplied. Two builds of the
+    same version then appear as two products in "Apps & features" and ``msiexec /x`` by
+    path cannot remove the installed one (error 1605). A version-derived UUID keeps the
+    code stable for a release and different for the next one.
+    """
+    return "{" + str(uuid.uuid5(_NAMESPACE, f"TidyMate-{version}")).upper() + "}"
 
 
 def normalize_version(raw: str) -> str:
@@ -81,6 +94,8 @@ def main(argv: list[str] | None = None) -> int:
         f"Version={version}",
         "-d",
         f"SourceDir={source}",
+        "-d",
+        f"ProductCode={product_code(version)}",
         "-arch",
         "x64",
         "-o",

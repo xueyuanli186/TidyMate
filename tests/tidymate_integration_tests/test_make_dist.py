@@ -92,6 +92,12 @@ def test_msi_version_normalisation() -> None:
     assert build_msi.normalize_version("1.2.3+local") == "1.2.3"
 
 
+def test_product_code_is_stable_per_version() -> None:
+    assert build_msi.product_code("0.1.0") == build_msi.product_code("0.1.0")
+    assert build_msi.product_code("0.1.0") != build_msi.product_code("0.1.1")
+    assert build_msi.product_code("0.1.0").startswith("{")
+
+
 def test_build_msi_refuses_without_wix(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     source = tmp_path / "bundle"
     source.mkdir()
