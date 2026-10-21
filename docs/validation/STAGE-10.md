@@ -100,6 +100,20 @@ $ python -m tidymate_cli use-preset downloads-cleanup <dir> -o <out>
 5. 预置规则只覆盖现有条件能力；`duplicates-to-trash` 是「文件名疑似重复」，不是内容哈希去重。
 6. 打包：`presets/` 已通过 PyInstaller `--add-data` 进入 bundle，但本阶段的 MSI 尚未重新构建。
 
+## 6.1 CI 环境差异（2026-10-21 修复）
+
+GitHub Actions 的 Windows runner 与开发机有两处差异，导致 run #9-#17 的 `test` job 连红：
+
+1. **能创建真实符号链接**：原测试假设链接一定出现在 plan 里；但默认扫描器按铁律 8
+   *跳过* reparse point 并写进 scan warnings。测试改为同时接受「planner reject」与
+   「scanner skip+warning」两种正确结果。
+2. **没有交互桌面**：`send2trash` 能入回收站，但从回收站还原依赖 Shell verb，runner 上
+   返回 `no_verb`。所有依赖还原的用例标记为 desktop-only；另增
+   `test_190_changes_without_trash_round_trip`（190 条 move/rename/copy 全量复原），
+   保证 CI 仍然验证「撤销能全部复原」，而不是被整体跳过。
+
+这两条都是**测试假设**问题，不是产品逻辑回归；本地与 VM 仍跑完整的 200 条（含 trash）。
+
 ## 7. 复现
 
 ```powershell
