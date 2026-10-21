@@ -36,7 +36,20 @@ _META_KEYS = frozenset({_LINE_KEY, _LINES_KEY})
 _ALLOWED_TOP = frozenset({"rules", "first_match_only", "firstMatchOnly"})
 _ALLOWED_RULE = frozenset({"id", "enabled", "priority", "when", "action"})
 _ALLOWED_WHEN = frozenset(
-    {"path_glob", "path_regex", "ext", "size", "mtime", "name_regex"},
+    {
+        "path_glob",
+        "path_regex",
+        "path_contains",
+        "parent",
+        "parent_contains",
+        "ext",
+        "ext_exclude",
+        "size",
+        "size_max",
+        "mtime",
+        "mtime_before",
+        "name_regex",
+    },
 )
 _ALLOWED_ACTION = frozenset({"op", "template", "conflict"})
 
@@ -250,7 +263,26 @@ def _parse_when(
             timeout_ms,
         )
 
+    path_contains = _str_field(raw, "path_contains", f"{prefix}.when", errors)
+    parent = _str_field(raw, "parent", f"{prefix}.when", errors)
+    parent_contains = _str_field(raw, "parent_contains", f"{prefix}.when", errors)
+
     extensions = _parse_extensions(raw, f"{prefix}.when", errors, line)
+    excluded: frozenset[str] = frozenset()
+    if "ext_exclude" in raw:
+        raw_excluded = raw["ext_exclude"]
+        if not isinstance(raw_excluded, list) or not raw_excluded:
+            _fail(
+                errors,
+                "ext_exclude must be a non-empty list",
+                line=_field_line(raw, "ext_exclude", line),
+                field=f"{prefix}.when.ext_exclude",
+            )
+        else:
+            excluded = frozenset(
+                str(item).lower() if str(item).startswith(".") else f".{str(item).lower()}"
+                for item in raw_excluded
+            )
 
     size = None
     size_line = _field_line(raw, "size", line)
@@ -264,6 +296,23 @@ def _parse_when(
             except ValueError as exc:
                 _fail(errors, str(exc), line=size_line, field=f"{prefix}.when.size")
 
+    size_max = None
+    size_max_line = _field_line(raw, "size_max", line)
+    if "size_max" in raw:
+        raw_size_max = raw["size_max"]
+        if not isinstance(raw_size_max, str):
+            _fail(
+                errors,
+                "size_max must be a string",
+                line=size_max_line,
+                field=f"{prefix}.when.size_max",
+            )
+        else:
+            try:
+                size_max = parse_size_expression(raw_size_max)
+            except ValueError as exc:
+                _fail(errors, str(exc), line=size_max_line, field=f"{prefix}.when.size_max")
+
     mtime = None
     mtime_line = _field_line(raw, "mtime", line)
     if "mtime" in raw:
@@ -276,6 +325,28 @@ def _parse_when(
             except ValueError as exc:
                 _fail(errors, str(exc), line=mtime_line, field=f"{prefix}.when.mtime")
 
+    mtime_before = None
+    mtime_before_line = _field_line(raw, "mtime_before", line)
+    if "mtime_before" in raw:
+        raw_mtime_before = raw["mtime_before"]
+        if not isinstance(raw_mtime_before, str):
+            _fail(
+                errors,
+                "mtime_before must be a string",
+                line=mtime_before_line,
+                field=f"{prefix}.when.mtime_before",
+            )
+        else:
+            try:
+                mtime_before = parse_time_expression(raw_mtime_before)
+            except ValueError as exc:
+                _fail(
+                    errors,
+                    str(exc),
+                    line=mtime_before_line,
+                    field=f"{prefix}.when.mtime_before",
+                )
+
     if len(errors) > before:
         return None
 
@@ -283,9 +354,15 @@ def _parse_when(
         path_glob=path_glob,
         path_glob_regex=path_glob_regex,
         path_regex=path_regex,
+        path_contains=path_contains,
+        parent=parent,
+        parent_contains=parent_contains,
         extensions=extensions,
+        excluded_extensions=excluded,
         size=size,
+        size_max=size_max,
         mtime=mtime,
+        mtime_before=mtime_before,
         name_regex=name_regex,
     )
 

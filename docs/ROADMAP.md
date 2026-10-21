@@ -15,6 +15,7 @@
 | 7 | CLI 完整化 | `scan/plan/apply/undo/status/verify`、`--apply` 二次确认语义、人类可读报告 | 🟡 部分完成（plan/apply/undo/verify/status；scan 未做） |
 | 8 | GUI | PySide6 界面、预览树、二次确认弹窗、首次运行提示 | ✅ 完成（2026-10-20，offscreen 测试） |
 | 9 | 打包与发布 | PyInstaller onedir、WiX v4 MSI、便携 zip、签名（待定）、发布流程 | 🟡 便携版与 MSI 已构建；安装/卸载未验证（需管理员） |
+| 10a | 可视化规则构建器 + 预置规则库 | 表单 + 实时预览 + 变量插入；8 个预置；CLI list-presets / list-rules / use-preset。子阶段 3（YAML 高级模式）未做 | 🟡 子阶段 1-2 完成（2026-10-21） |
 | 10 | AI 建议（可选） | 默认关闭的元数据建议，只读文件名/扩展名/大小/时间，只出建议不执行 | 未开始 |
 
 ## 已知欠缺（继承到后续阶段）

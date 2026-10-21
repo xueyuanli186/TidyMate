@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from pathlib import PureWindowsPath
 
 from tidymate_core.rules.models import When
 from tidymate_core.scanning.models import FileEntry
@@ -70,10 +71,32 @@ def matches(entry: FileEntry, when: When, *, now: datetime | None = None) -> boo
         return False
     if when.path_regex is not None and not when.path_regex.search(entry.normalized_path):
         return False
+    if (
+        when.path_contains is not None
+        and when.path_contains.casefold() not in entry.normalized_path.casefold()
+    ):
+        return False
+    parent_name = PureWindowsPath(entry.full_path).parent.name
+    if when.parent is not None and parent_name.casefold() != when.parent.casefold():
+        return False
+    if (
+        when.parent_contains is not None
+        and when.parent_contains.casefold() not in parent_name.casefold()
+    ):
+        return False
     if when.extensions and entry.ext not in when.extensions:
+        return False
+    if when.excluded_extensions and entry.ext in when.excluded_extensions:
         return False
     if when.size is not None and not when.size.matches(entry.size):
         return False
+    if when.size_max is not None and not when.size_max.matches(entry.size):
+        return False
     if when.mtime is not None and not when.mtime.matches(entry.mtime_utc, now=now):
+        return False
+    if when.mtime_before is not None and not when.mtime_before.matches(
+        entry.mtime_utc,
+        now=now,
+    ):
         return False
     return when.name_regex is None or bool(when.name_regex.search(entry.name))

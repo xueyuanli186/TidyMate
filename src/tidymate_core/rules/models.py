@@ -39,9 +39,21 @@ class When:
     path_glob: str | None = None
     path_glob_regex: SafeRegex | None = None
     path_regex: SafeRegex | None = None
+    #: Case-insensitive substring of the full path (form-friendly alternative to a regex).
+    path_contains: str | None = None
+    #: Exact name of the file's immediate parent directory (case-insensitive).
+    parent: str | None = None
+    #: Case-insensitive substring of the immediate parent directory name.
+    parent_contains: str | None = None
     extensions: frozenset[str] = frozenset()
+    #: Extensions that must NOT match (the builder's "not contains").
+    excluded_extensions: frozenset[str] = frozenset()
     size: SizeCondition | None = None
+    #: Inclusive upper bound used by the visual builder's "range" operator.
+    size_max: SizeCondition | None = None
     mtime: TimeCondition | None = None
+    #: Upper bound used by the visual builder's "between" operator.
+    mtime_before: TimeCondition | None = None
     name_regex: SafeRegex | None = None
 
     def __post_init__(self) -> None:
@@ -54,9 +66,15 @@ class When:
             (
                 self.path_glob is not None,
                 self.path_regex is not None,
+                self.path_contains is not None,
+                self.parent is not None,
+                self.parent_contains is not None,
                 bool(self.extensions),
+                bool(self.excluded_extensions),
                 self.size is not None,
+                self.size_max is not None,
                 self.mtime is not None,
+                self.mtime_before is not None,
                 self.name_regex is not None,
             ),
         )

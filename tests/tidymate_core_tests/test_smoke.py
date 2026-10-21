@@ -128,6 +128,9 @@ def test_cli_exposes_the_expected_commands() -> None:
         "verify",
         "list-batches",
         "show-batch",
+        "list-presets",
+        "list-rules",
+        "use-preset",
     }, f"unexpected CLI surface: {names}"
 
 

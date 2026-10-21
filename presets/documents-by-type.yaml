@@ -1,0 +1,12 @@
+# name: 文档按类型分类
+# description: 把文档按 PDF / DOC / XLS / PPT 分目录存放
+# author: TidyMate Team
+# version: 1.0
+# tags: [文档, 整理]
+# icon: file-text
+
+rules:
+  - id: documents-by-type
+    priority: 10
+    when: { ext: [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"] }
+    action: { op: move, template: "Documents/{ext_nodot}/{year}/{name}", conflict: rename }

@@ -35,6 +35,8 @@ ALLOWED_MODULES: frozenset[str] = frozenset(
         "tidymate_core/execution/reports.py",
         # stage 7-9: undo engine (moves files back, recycles copies)
         "tidymate_core/execution/undo.py",
+        # stage 10: copies preset rules into the user rule directory
+        "tidymate_core/presets.py",
     },
 )
 

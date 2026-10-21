@@ -8,12 +8,14 @@ typing prompt only - never a gate).
 
 from __future__ import annotations
 
+import contextlib
 import os
 from dataclasses import replace
 from pathlib import Path
 
 import typer
 
+from tidymate_core import presets
 from tidymate_core._version import __version__
 from tidymate_core.execution import (
     ExecutionOptions,
@@ -87,6 +89,11 @@ def main(
     ),
 ) -> None:
     """Global options shared by every subcommand."""
+    del version
+    # First run: copy the shipped presets into the user rule directory so they can be
+    # edited. Existing files are never overwritten.
+    with contextlib.suppress(OSError):
+        presets.install_presets_if_missing()
 
 
 @app.command()
@@ -537,6 +544,85 @@ def verify(
         typer.echo(f"verify: {len(problems)} inconsistency(ies)")
     if problems:
         raise typer.Exit(code=1)
+
+
+@app.command("list-presets")
+def list_presets_command() -> None:
+    """List the rule presets shipped with TidyMate."""
+    entries = presets.list_presets()
+    if not entries:
+        typer.echo(f"没有找到预置规则（{presets.presets_root()}）。")
+        return
+    typer.echo(f"{'id':<28} {'名称':<18} 标签")
+    for preset in entries:
+        typer.echo(f"{preset.preset_id:<28} {preset.name:<18} {', '.join(preset.tags)}")
+
+
+@app.command("list-rules")
+def list_rules_command() -> None:
+    """List the user's editable rule files."""
+    paths = presets.list_user_rules()
+    typer.echo(f"规则目录：{presets.user_rules_dir()}")
+    if not paths:
+        typer.echo("还没有自定义规则。用 `use-preset <name>` 复制一条开始修改。")
+        return
+    for path in paths:
+        meta = presets.parse_metadata(path.read_text(encoding="utf-8"))
+        typer.echo(f"{path.name:<32} {meta.get('name', path.stem)}")
+
+
+@app.command("use-preset")
+def use_preset(
+    name: str = typer.Argument(..., help="Preset id or display name."),
+    root: Path = typer.Argument(..., help="Directory to scan."),
+    out_root: Path = typer.Option(..., "--out-root", "-o"),
+    db: Path | None = typer.Option(None, "--db"),
+    yes: bool = typer.Option(False, "--yes", help="Skip the first-run prompt."),
+) -> None:
+    """Copy a preset into the user rule directory and preview it against a directory."""
+    preset = presets.find_preset(name)
+    if preset is None:
+        typer.echo(f"未知预置规则 {name!r}；用 `list-presets` 查看可用项。", err=True)
+        raise typer.Exit(code=2)
+
+    target = presets.user_rules_dir() / f"{preset.preset_id}.yaml"
+    if not target.exists():
+        target = presets.copy_preset(preset.preset_id)
+    typer.echo(f"规则文件：{target}")
+
+    db_path = db or _default_db()
+    if not db_path.exists() and not yes:
+        typer.echo(FIRST_RUN_BANNER)
+        answer = typer.prompt("输入 YES 表示你已在测试目录演练或已备份")
+        if answer.strip().upper() != "YES":
+            typer.echo("已取消（没有扫描、没有写日志）。", err=True)
+            raise typer.Exit(code=1)
+
+    journal = _open_journal(db_path, protect_dir=db is None)
+    try:
+        try:
+            ruleset = load_rules(target)
+        except RuleLoadError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=2) from exc
+        request = PlanRequest(
+            scan=ScanConfig(roots=(str(root),)),
+            rules=ruleset,
+            output_root=str(out_root),
+        )
+        result = build_plan(request)
+        journal.record_preview(
+            result,
+            roots=(str(root),),
+            rules_file=str(target),
+            app_version=__version__,
+        )
+    finally:
+        journal.close()
+
+    typer.echo(render_table(result, limit=40))
+    typer.echo("")
+    typer.echo(f"dry-run only: no files were modified.  batch={result.batch_id}")
 
 
 __all__ = ["app"]

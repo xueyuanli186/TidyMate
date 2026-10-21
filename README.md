@@ -2,11 +2,11 @@
 
 Windows 本地文件整理器。按规则把散乱文件归入模板目录，**全程可预览、可撤销、默认不联网**。
 
-> **当前状态：阶段 9（便携版 + MSI 打包）。**
-> 已产出 `TidyMate-0.1.0-windows.zip`（GUI + `cli/tidymate.exe`，PyInstaller onedir），
-> WiX v4 的 MSI 源与构建脚本已落地、由 CI 构建；MSI 的安装/卸载尚未在干净机器验证。
-> 功能上预览、执行、撤销、核对都可用，删除只进回收站。
-> 细节见 [`docs/validation/STAGE-9.md`](docs/validation/STAGE-9.md)。
+> **当前状态：阶段 10（可视化规则构建器 + 预置规则库，子阶段 1-2）。**
+> 不写 YAML 也能建规则：表单 + 300ms 实时预览 + 变量插入；内置 8 个预置方案，
+> 可预览、复制、自定义。高级 YAML 编辑器与双向切换（子阶段 3）尚未开始。
+> 预览、执行、撤销、核对功能不变，删除只进回收站。
+> 细节见 [`docs/validation/STAGE-10.md`](docs/validation/STAGE-10.md)。
 >
 > **换会话 / 上下文用尽时**：从 [`docs/HANDOFF.md`](docs/HANDOFF.md) 继续，那里有当前基线、
 > 已定决策和下一步。

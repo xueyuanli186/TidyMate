@@ -1,0 +1,12 @@
+# name: 照片按年月归档
+# description: 把照片按拍摄/修改年月归入 Photos/年/月
+# author: TidyMate Team
+# version: 1.0
+# tags: [图片, 归档]
+# icon: image
+
+rules:
+  - id: photos-by-month
+    priority: 10
+    when: { ext: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2"] }
+    action: { op: move, template: "Photos/{year}/{month}/{name}", conflict: rename }

@@ -1,0 +1,12 @@
+# name: 音乐按艺术家归档
+# description: 把音乐文件按所在目录（艺术家）归入 Music/艺术家
+# author: TidyMate Team
+# version: 1.0
+# tags: [音乐, 归档]
+# icon: music
+
+rules:
+  - id: music-by-artist
+    priority: 10
+    when: { ext: [".mp3", ".flac", ".wav", ".m4a", ".aac"] }
+    action: { op: move, template: "Music/{parent}/{name}", conflict: rename }

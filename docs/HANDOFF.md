@@ -14,10 +14,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / 提交 | `main` @ 阶段 9（便携版 + MSI 已本机构建） |
-| 测试 | `572 passed`（57s），覆盖率 `90.30%`（门槛 90%） |
-| 静态检查 | `ruff check` / `ruff format --check`（119 文件）/ `mypy`（99 文件）全过 |
-| 安全闸门 | `check_forbidden_apis.py`：`OK ... 61+ scanned files`；`check_readonly.py`：`OK ... 43 product files` |
+| 分支 / 提交 | `main` @ 阶段 10（规则构建器 + 预置库，子阶段 1-2） |
+| 测试 | `620 passed`（68s），覆盖率 `90.09%`（门槛 90%） |
+| 静态检查 | `ruff check` / `ruff format --check`（120+ 文件）/ `mypy`（110 文件）全过 |
+| 安全闸门 | `check_forbidden_apis.py`：`OK ... 70 scanned files`；`check_readonly.py`：`OK ... 44 product files` |
 | 版本 | `0.1.0`，唯一来源 `src/tidymate_core/_version.py` |
 
 复现命令（在仓库根目录）：
@@ -47,12 +47,13 @@ python scripts/check_readonly.py
    `onedrive_placeholder`。阶段 5 的执行器必须按 `error_kind` 拒绝执行这两类条目，
    且要在移动前复查（见第 5 节第一条）。
 
-## 4. 下一步：发布前验证
+## 4. 下一步：规则构建器子阶段 3，然后发布验证
 
-1. 在干净 Windows 11 VM 上安装 MSI、启动 GUI、卸载，确认用户数据不被删除；
-2. 打 `v0.1.0` tag 验证 `release.yml`（仍未实测）；
-3. 决定是否购买代码签名证书（未签名 MSI 会触发 SmartScreen）；
-4. GUI 的 P1 遗留：同步执行冻结界面、缺少历史批次选择器（v0.2.0）。
+1. **子阶段 3**：YAML 高级模式（行号、高亮、语法校验、可视化↔源码双向切换）。
+   需要先写 YAML→表单的反向解析；`rule_draft.draft_to_yaml` 已有正向。
+2. 重跑打包，把 `presets/` 放进 MSI，并在干净 VM 里确认预置库可见。
+3. 发布前：`v0.1.0` tag 实测 `release.yml`、签名决策、GUI 两个 P1（同步执行冻结、
+   历史批次选择器）。
 
 ## 5. 已知欠缺与坑（别重复踩）
 

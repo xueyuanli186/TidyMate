@@ -1,0 +1,12 @@
+# name: 疑似重复文件清理
+# description: 把文件名里带“副本 / copy”的文件送入回收站（请先 Dry-run 确认）
+# author: TidyMate Team
+# version: 1.0
+# tags: [清理, 重复]
+# icon: trash
+
+rules:
+  - id: duplicate-copies
+    priority: 10
+    when: { name_regex: '(?i)(副本|copy|\s\(\d+\))' }
+    action: { op: trash }

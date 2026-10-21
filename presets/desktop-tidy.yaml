@@ -1,0 +1,22 @@
+# name: 桌面文件分类
+# description: 把桌面上的图片、文档、快捷方式之外的杂项分门别类
+# author: TidyMate Team
+# version: 1.0
+# tags: [桌面, 整理]
+# icon: desktop
+
+rules:
+  - id: desktop-images
+    priority: 10
+    when: { parent: "Desktop", ext: [".jpg", ".jpeg", ".png", ".gif"] }
+    action: { op: move, template: "Pictures/{year}/{name}", conflict: rename }
+
+  - id: desktop-documents
+    priority: 20
+    when: { parent: "Desktop", ext: [".pdf", ".docx", ".xlsx", ".pptx", ".txt"] }
+    action: { op: move, template: "Documents/{year}/{name}", conflict: rename }
+
+  - id: desktop-archives
+    priority: 30
+    when: { parent: "Desktop", ext: [".zip", ".7z", ".rar"] }
+    action: { op: move, template: "Archives/{name}", conflict: rename }

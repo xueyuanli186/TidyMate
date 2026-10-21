@@ -1,0 +1,27 @@
+# name: 下载目录整理
+# description: 把下载目录里的文件按图片、文档、压缩包和安装包归类
+# author: TidyMate Team
+# version: 1.0
+# tags: [下载, 整理]
+# icon: download
+
+rules:
+  - id: downloads-images
+    priority: 10
+    when: { parent: "Downloads", ext: [".jpg", ".jpeg", ".png", ".gif", ".webp"] }
+    action: { op: move, template: "Pictures/{year}/{name}", conflict: rename }
+
+  - id: downloads-documents
+    priority: 20
+    when: { parent: "Downloads", ext: [".pdf", ".docx", ".xlsx", ".pptx", ".txt"] }
+    action: { op: move, template: "Documents/{year}/{name}", conflict: rename }
+
+  - id: downloads-archives
+    priority: 30
+    when: { parent: "Downloads", ext: [".zip", ".7z", ".rar", ".tar", ".gz"] }
+    action: { op: move, template: "Archives/{year}/{name}", conflict: rename }
+
+  - id: downloads-installers
+    priority: 40
+    when: { parent: "Downloads", ext: [".exe", ".msi"] }
+    action: { op: move, template: "Installers/{name}", conflict: rename }

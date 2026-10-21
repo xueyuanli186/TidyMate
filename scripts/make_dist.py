@@ -92,6 +92,8 @@ def _run_pyinstaller(
         "--specpath",
         str(REPO_ROOT / "build" / "specs"),
         "--windowed" if windowed else "--console",
+        "--add-data",
+        f"{REPO_ROOT / 'presets'};presets",
         str(REPO_ROOT / "build" / entry),
     ]
     result = subprocess.run(command, cwd=REPO_ROOT, check=False)  # noqa: S603 - fixed argv

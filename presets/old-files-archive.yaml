@@ -1,0 +1,12 @@
+# name: 一年未动的文件归档
+# description: 把超过一年没有修改的文件移入 Archive/年份
+# author: TidyMate Team
+# version: 1.0
+# tags: [归档, 清理]
+# icon: clock
+
+rules:
+  - id: old-files
+    priority: 10
+    when: { mtime: "older-than-1y" }
+    action: { op: move, template: "Archive/{year}/{name}", conflict: rename }

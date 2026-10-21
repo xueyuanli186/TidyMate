@@ -90,6 +90,10 @@ class MainWindow(QMainWindow):
         layout.addLayout(form)
 
         buttons = QHBoxLayout()
+        self.editor_button = QPushButton("规则编辑器…")
+        self.editor_button.clicked.connect(self._on_open_editor)
+        self.library_button = QPushButton("规则库…")
+        self.library_button.clicked.connect(self._on_open_library)
         self.dry_run_button = QPushButton("Dry-run 预览")
         self.dry_run_button.clicked.connect(self._on_dry_run)
         self.export_button = QPushButton("导出报告")
@@ -104,6 +108,8 @@ class MainWindow(QMainWindow):
         self.undo_button.setToolTip("先预览将回滚的条目，再要求二次确认。")
         self.undo_button.clicked.connect(self._on_undo)
 
+        buttons.addWidget(self.editor_button)
+        buttons.addWidget(self.library_button)
         buttons.addWidget(self.dry_run_button)
         buttons.addWidget(self.export_button)
         buttons.addStretch(1)
@@ -149,6 +155,20 @@ class MainWindow(QMainWindow):
             target.setText(chosen)
 
     # -------------------------------------------------------------- actions
+    def _on_open_editor(self) -> None:
+        from tidymate_app.rule_editor import RuleEditorDialog
+
+        RuleEditorDialog(
+            self,
+            root=self.root_edit.text().strip(),
+            out_root=self.output_edit.text().strip(),
+        ).exec()
+
+    def _on_open_library(self) -> None:
+        from tidymate_app.library_dialog import LibraryDialog
+
+        LibraryDialog(self).exec()
+
     def _on_dry_run(self) -> None:
         outcome: DryRunOutcome = run_dry_run(
             self.root_edit.text().strip(),

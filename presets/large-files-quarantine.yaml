@@ -1,0 +1,12 @@
+# name: 大文件隔离
+# description: 把超过 100MB 的文件移入 Quarantine，便于集中检查
+# author: TidyMate Team
+# version: 1.0
+# tags: [清理, 大文件]
+# icon: archive
+
+rules:
+  - id: large-files
+    priority: 10
+    when: { size: ">=100MB" }
+    action: { op: move, template: "Quarantine/{year}/{name}", conflict: rename }

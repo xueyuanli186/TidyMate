@@ -79,11 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         return EX_UNAVAILABLE
 
     version = normalize_version(args.version)
-    output = (
-        Path(args.output).resolve()
-        if args.output
-        else source.parent / f"{source.name}.msi"
-    )
+    output = Path(args.output).resolve() if args.output else source.parent / f"{source.name}.msi"
     output.parent.mkdir(parents=True, exist_ok=True)
 
     command = [
