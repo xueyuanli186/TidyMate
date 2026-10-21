@@ -279,7 +279,6 @@ def test_copy_undo_recycles_the_copy(tmp_path: Path) -> None:
         assert src.exists(), "copy undo must never touch the source"
 
 
-
 def test_190_changes_without_trash_round_trip(tmp_path: Path) -> None:
     """CI-safe round trip: everything except the trash rule.
 
