@@ -16,7 +16,7 @@ from functools import partial
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -63,9 +63,15 @@ def _slug(name: str) -> str:
 
 
 class ConditionWidget(QWidget):
-    """One editable condition row."""
+    """One editable condition row.
+
+    ``removed`` is emitted instead of deleting the widget here: the owner must drop its
+    reference first, otherwise the 300 ms refresh walks a list containing a deleted C++
+    object (``RuntimeError: Internal C++ object already deleted``).
+    """
 
     changed = Signal()
+    removed = Signal(object)
 
     def __init__(self, condition: Condition | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -109,9 +115,7 @@ class ConditionWidget(QWidget):
             self._sync_operators()
 
     def _remove(self) -> None:
-        self.setParent(None)
-        self.deleteLater()
-        self.changed.emit()
+        self.removed.emit(self)
 
     def _sync_operators(self) -> None:
         field_id = str(self.field.currentData())
@@ -357,8 +361,17 @@ class RuleEditorDialog(QDialog):
     def _add_condition(self, condition: Condition | None = None) -> None:
         widget = ConditionWidget(condition, self.conditions_host)
         widget.changed.connect(self._schedule)
+        widget.removed.connect(self._remove_condition)
         self._condition_widgets.append(widget)
         self.conditions_layout.addWidget(widget)
+        self._schedule()
+
+    def _remove_condition(self, widget: ConditionWidget) -> None:
+        """Drop the reference *before* destroying the widget (see ConditionWidget)."""
+        if widget in self._condition_widgets:
+            self._condition_widgets.remove(widget)
+        widget.setParent(None)
+        widget.deleteLater()
         self._schedule()
 
     # -------------------------------------------------------------- preview
@@ -368,8 +381,11 @@ class RuleEditorDialog(QDialog):
     def collect(self) -> RuleDraft:
         """Read the form into a draft (conditions with an empty value are ignored)."""
         conditions = []
-        for widget in self._condition_widgets:
-            condition = widget.to_condition()
+        for widget in list(self._condition_widgets):
+            try:
+                condition = widget.to_condition()
+            except RuntimeError:  # the C++ side is gone (removed or window closing)
+                continue
             if condition.value.strip():
                 conditions.append(condition)
         return RuleDraft(
@@ -426,6 +442,10 @@ class RuleEditorDialog(QDialog):
                     item.setBackground(color)
                 self.preview_table.setItem(row_index, column, item)
         self.preview_table.resizeColumnToContents(0)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt override
+        self._timer.stop()
+        super().closeEvent(event)
 
     # ----------------------------------------------------------------- save
     def _save(self, *, save_as: bool = False) -> None:

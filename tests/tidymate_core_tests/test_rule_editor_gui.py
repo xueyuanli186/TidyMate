@@ -82,3 +82,31 @@ def test_library_lists_all_presets(qapp: QApplication) -> None:
     visible = [card for card in dialog._cards if not card.isHidden()]
     assert len(visible) == 1
     dialog.close()
+
+
+def test_removing_a_condition_is_safe(
+    qapp: QApplication,
+    inbox: Path,
+    tmp_path: Path,
+) -> None:
+    """Regression: deleting a row used to leave a dead C++ object in the list."""
+    del qapp
+    dialog = RuleEditorDialog(root=str(inbox), out_root=str(tmp_path / "out"))
+    dialog._add_condition()
+    assert len(dialog._condition_widgets) == 2
+    dialog._condition_widgets[-1]._remove()
+    QTest.qWait(450)  # the debounce timer fires here; it must not touch the dead widget
+    assert len(dialog._condition_widgets) == 1
+    dialog._refresh()
+    dialog.close()
+
+
+def test_closing_the_editor_stops_the_timer(
+    qapp: QApplication,
+    inbox: Path,
+    tmp_path: Path,
+) -> None:
+    del qapp
+    dialog = RuleEditorDialog(root=str(inbox), out_root=str(tmp_path / "out"))
+    dialog.close()
+    assert dialog._timer.isActive() is False
