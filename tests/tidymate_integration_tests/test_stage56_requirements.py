@@ -75,8 +75,15 @@ def test_symlink_is_rejected_not_followed(tmp_path: Path) -> None:
     plan = build_plan(make_request(root))
 
     by_name = {Path(change.src).name: change for change in plan.changes}
-    assert by_name["link.txt"].status is ChangeStatus.REJECT
-    assert "reparse" in " ".join(by_name["link.txt"].notes)
+    if "link.txt" in by_name:
+        # A planner that received the link refuses it explicitly.
+        assert by_name["link.txt"].status is ChangeStatus.REJECT
+        assert "reparse" in " ".join(by_name["link.txt"].notes)
+    else:
+        # The default scanner does not follow reparse points and reports them as a
+        # skipped scan error instead of emitting an entry (iron rule 8). Both are valid
+        # "never silently follow the link" outcomes; this is what GitHub runners hit.
+        assert any("reparse point" in warning for warning in plan.warnings), plan.warnings
 
 
 def test_long_source_path_is_rejected(tmp_path: Path) -> None:

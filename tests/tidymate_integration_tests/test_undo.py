@@ -8,9 +8,12 @@ the assertion never trusts the journal alone.
 from __future__ import annotations
 
 import hashlib
+import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 from tidymate_core.execution import Executor, Undoer, verify_batch
 from tidymate_core.journal import Journal
@@ -21,6 +24,11 @@ from tidymate_core.scanning import ScanConfig
 from tidymate_core.scanning.cancel import CancelToken
 
 NOW = datetime(2026, 10, 20, 12, 0, tzinfo=UTC)
+
+CI = os.environ.get("CI") == "true"
+#: The recycle-bin restore goes through Shell verbs, which need an interactive
+#: desktop. GitHub's Windows runners run without one (``no_verb``).
+_NEEDS_DESKTOP_REASON = "recycle-bin restore needs an interactive desktop; covered on a real VM"
 
 RULES = """
 rules:
@@ -52,6 +60,9 @@ def snapshot(root: Path) -> dict[str, tuple[int, int, str]]:
                 digest,
             )
     return result
+
+
+RULES_NO_TRASH = RULES.split("  - id: trash")[0]
 
 
 def build_tree(root: Path) -> Path:
@@ -90,6 +101,7 @@ def make_plan(root: Path, out: Path) -> Plan:
     )
 
 
+@pytest.mark.skipif(CI, reason=_NEEDS_DESKTOP_REASON)
 def test_200_changes_apply_then_undo_restores_everything(tmp_path: Path) -> None:
     inbox = build_tree(tmp_path / "inbox")
     out = tmp_path / "Sorted"
@@ -117,6 +129,7 @@ def test_200_changes_apply_then_undo_restores_everything(tmp_path: Path) -> None
     assert not [p for p in out.rglob("*") if p.is_file()], "output tree must be empty again"
 
 
+@pytest.mark.skipif(CI, reason=_NEEDS_DESKTOP_REASON)
 def test_second_undo_reports_nothing_and_changes_nothing(tmp_path: Path) -> None:
     inbox = build_tree(tmp_path / "inbox")
     out = tmp_path / "Sorted"
@@ -131,6 +144,7 @@ def test_second_undo_reports_nothing_and_changes_nothing(tmp_path: Path) -> None
         assert verify_batch(journal, plan.batch_id) == []
 
 
+@pytest.mark.skipif(CI, reason=_NEEDS_DESKTOP_REASON)
 def test_undo_can_resume_after_cancel(tmp_path: Path) -> None:
     inbox = build_tree(tmp_path / "inbox")
     out = tmp_path / "Sorted"
@@ -263,6 +277,42 @@ def test_copy_undo_recycles_the_copy(tmp_path: Path) -> None:
         assert report.failed == 0
         assert not (out / "Bin" / "d.bin").exists()
         assert src.exists(), "copy undo must never touch the source"
+
+
+
+def test_190_changes_without_trash_round_trip(tmp_path: Path) -> None:
+    """CI-safe round trip: everything except the trash rule.
+
+    The ten ``.tmp`` files stay untouched, so undo never needs the recycle bin; the other
+    190 files (move/rename/copy) must come back byte-for-byte.
+    """
+    inbox = build_tree(tmp_path / "inbox")
+    out = tmp_path / "Sorted"
+    before = snapshot(inbox)
+
+    with Journal(tmp_path / "j.db") as journal:
+        plan = build_plan(
+            PlanRequest(
+                scan=ScanConfig(roots=(str(inbox),)),
+                rules=load_rules_from_text(RULES_NO_TRASH),
+                output_root=str(out),
+                created_at=NOW,
+                local_tz=UTC,
+                now=NOW,
+            ),
+        )
+        journal.record_preview(plan)
+        applied = Executor(journal).run(plan)
+        assert applied.counts["ok"] == 190, applied.counts
+        undone = Undoer(journal).run(plan.batch_id)
+        assert undone.failed == 0, [(o.seq, o.error_kind, o.error) for o in undone.outcomes]
+        assert verify_batch(journal, plan.batch_id) == []
+
+    after = snapshot(inbox)
+    assert set(after) == set(before)
+    for name, (size, _mtime, digest) in before.items():
+        assert after[name][0] == size
+        assert after[name][2] == digest
 
 
 def test_stats_match_sql_and_disk(tmp_path: Path) -> None:

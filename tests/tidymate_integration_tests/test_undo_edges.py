@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -70,6 +71,10 @@ def test_crash_recovery_marks_interrupted_as_partial(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="recycle bin is Windows-only")
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="recycle-bin restore needs an interactive desktop",
+)
 def test_trash_undo_restores_the_file(tmp_path: Path) -> None:
     inbox = tmp_path / "inbox"
     inbox.mkdir()
